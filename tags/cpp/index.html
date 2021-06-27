@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+
+
+<html lang="zh-cn" data-theme="">
+<head>
+    
+        
+<meta charset="utf-8">
+<meta name="HandheldFriendly" content="True">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer-when-downgrade">
+
+<title>cpp - 存留处</title>
+<meta name="description" content="">
+
+<link rel="alternate" type="application/rss+xml" href="https://ivkus.github.io/tags/cpp/index.xml" title="存留处" />
+<link rel="icon" type="image/x-icon" href="https://ivkus.github.io/favicon.ico">
+<link rel="apple-touch-icon-precomposed" href="https://ivkus.github.io/favicon.png">
+
+
+
+    
+
+
+
+
+
+    
+    
+    
+
+    
+        <link rel="stylesheet" href="https://ivkus.github.io/css/style.03fcbf2f5adfa317daeecc510bd9aa2cd268b14a385fc2498842fa5602e937f2.css" integrity="sha256-A/y/L1rfoxfa7sxRC9mqLNJosUo4X8JJiEL6VgLpN/I=">
+    
+
+
+
+
+
+<meta property="og:title" content="cpp" />
+<meta property="og:description" content="" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://ivkus.github.io/tags/cpp/" />
+<meta property="og:updated_time" content="2020-01-20T22:58:05+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="cpp"/>
+<meta name="twitter:description" content=""/>
+
+
+
+
+
+
+
+
+
+
+
+    
+</head>
+<body>
+    <a class="skip-main" href="#main">Skip to main content</a>
+    <div class="container">
+        <header class="common-header"> 
+            
+                <div class="header-top">
+    <h1 class="site-title">
+        <a href="/">存留处</a>
+    </h1>
+    <ul class="social-icons">
+
+
+</ul>
+
+</div>
+
+    <nav>
+        
+        
+        <a class="" href="https://ivkus.github.io/posts/" title="Archive">Archive</a>
+        
+        <a class="" href="https://ivkus.github.io/tags/" title="">Tags</a>
+        
+        <a class="" href="https://ivkus.github.io/about/" title="">About</a>
+        
+    </nav>
+
+
+
+
+            
+        </header>
+        <main id="main" tabindex="-1"> 
+            
+    <h1>Tag: cpp</h1>
+    <div class="post-info">
+        <a href="https://ivkus.github.io/tags">To all tags</a>
+    </div>
+    
+        <article class="post-list h-feed">
+    <header class="post-header">
+        <h1 class="p-name post-title"><a class="u-url" href="/posts/asio/">ASIO观察</a></h1>
+    </header>
+
+    
+        <div class="content post-summary p-summary">
+            <p><code>ASIO</code>或许是最知名的C++网络库了吧。</p>
+        </div>
+    
+    
+    
+    
+
+
+<div class="post-info">
+    
+        <div class="post-date dt-published">2020-01-20</div>
+    
+    
+    <a class="post-hidden-url u-url" href="https://ivkus.github.io/posts/asio/">https://ivkus.github.io/posts/asio/</a>
+    <a href=https://ivkus.github.io/ class="p-name p-author post-hidden-author h-card" rel="me"></a>
+
+
+    <div class="post-taxonomies">
+        
+            
+                <ul class="post-tags">
+                    
+                        <li><a href="https://ivkus.github.io/tags/asio">#asio</a></li>
+                    
+                        <li><a href="https://ivkus.github.io/tags/cpp">#cpp</a></li>
+                    
+                </ul>
+        
+    </div>
+</div>
+
+</article>
+    
+        <article class="post-list h-feed">
+    <header class="post-header">
+        <h1 class="p-name post-title"><a class="u-url" href="/posts/ns3_typeid/">TypeId in NS3</a></h1>
+    </header>
+
+    
+        <div class="content post-summary p-summary">
+            <p>NS3作为一个网络仿真库，出于性能的考量选择了C++。在写仿真程序时，不可避免的要对各种实体进行建模，自然C++中的class成了唯一可选的方案。不加任何技巧的class的确可以满足对某些实体的建模，可是在仿真软件的编写中需要有足够的动态性，比如有这样一些需求：</p>
+<ol>
+<li>动态的获知某个实体所具有的各类属性与属性的值</li>
+<li>这个实体的状态变化后引发一系列的动作</li>
+</ol>
+<p>这些都不是过分的需求，如果真的写过仿真程序的话肯定会非常渴求使用的软件能够提供实现这些需求的方法。要自己干巴巴的实现这些需求也不是不可以，比如可以提供一些查询接口来实现1；对于2的话，Qt的signal/slot或许可以实现。说到Qt了，其实QObject拥有了超越普通C++ class的能力，也都能满足上面指出的这些需求，但是其解决方案似乎有点重。</p>
+<p>幸好，NS3通过TypeId可以很好的解决上面提出的各类需求。</p>
+        </div>
+    
+    
+    
+    
+
+
+<div class="post-info">
+    
+        <div class="post-date dt-published">2018-07-29</div>
+    
+    
+    <a class="post-hidden-url u-url" href="https://ivkus.github.io/posts/ns3_typeid/">https://ivkus.github.io/posts/ns3_typeid/</a>
+    <a href=https://ivkus.github.io/ class="p-name p-author post-hidden-author h-card" rel="me"></a>
+
+
+    <div class="post-taxonomies">
+        
+            
+                <ul class="post-tags">
+                    
+                        <li><a href="https://ivkus.github.io/tags/ns3">#ns3</a></li>
+                    
+                        <li><a href="https://ivkus.github.io/tags/cpp">#cpp</a></li>
+                    
+                </ul>
+        
+    </div>
+</div>
+
+</article>
+    
+    
+
+
+
+        </main>
+        
+            <footer class="common-footer">
+    
+    
+
+    <div class="common-footer-bottom">
+        
+        <div class="copyright">
+            <p>© 2021<br>
+            Powered by <a target="_blank" rel="noopener noreferrer" href="https://gohugo.io/">Hugo</a>, theme <a target="_blank" rel="noopener noreferrer" href="https://github.com/mitrichius/hugo-theme-anubis">Anubis</a>.<br>
+            
+            </p>  
+        </div> 
+
+        
+
+
+   
+    </div>
+
+    <p class="h-card vcard">
+
+    <a href=https://ivkus.github.io/ class="p-name u-url url fn" rel="me"></a> 
+
+    
+
+    
+</p> 
+</footer>
+
+        
+    </div>
+</body>
+</html>

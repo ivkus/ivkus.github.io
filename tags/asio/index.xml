@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>asio on 存留处</title>
+    <link>https://ivkus.github.io/tags/asio/</link>
+    <description>存留处 (asio)</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>zh-cn</language>
+    <lastBuildDate>Mon, 20 Jan 2020 22:58:05 +0800</lastBuildDate>
+    
+    <atom:link href="https://ivkus.github.io/tags/asio/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>ASIO观察</title>
+      <link>https://ivkus.github.io/posts/asio/</link>
+      <pubDate>Mon, 20 Jan 2020 22:58:05 +0800</pubDate>
+      
+      <guid>https://ivkus.github.io/posts/asio/</guid>
+      <description>&lt;p&gt;&lt;code&gt;ASIO&lt;/code&gt;或许是最知名的C++网络库了吧。&lt;/p&gt;
+&lt;p&gt;对于这种级别的库，总会在很多时候看到它的身影，接着不由自主的去重复那一次又一次的入门。这样总归不是一个办法，既然选择了看，就要坚持下来看明白再走，不然又是白费不少的时间。&lt;/p&gt;
+&lt;p&gt;手上有一份boost_1_67的代码，在一年多以前分析过一次asio，里面的代码是有注释的，但是时隔这么久，又都忘了。应该记一下，方便下次再看。
+主要的参考脉络是一篇&lt;a href=&#34;http://spiritsaway.info/asio-implementation.html&#34;&gt;ASIO实现浅析&lt;/a&gt;。里面的代码已经过时了，还是分析的io_service，现在已经是io_context了，可以重新梳理一遍了。&lt;/p&gt;
+&lt;h1 id=&#34;reactor与task&#34;&gt;reactor与task&lt;/h1&gt;
+&lt;p&gt;谈起网络库，epoll与各类事件的监听与发送应该是核心，在asio里涉及这块的代码是&lt;code&gt;scheduler.do_run_one/task_cleanup::~task_cleanup&lt;/code&gt;，数据结构是&lt;code&gt;scheduler.op_queue_/scheduler.task_operation_&lt;/code&gt;。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;scheduler.do_run_one里有个对task_-&amp;gt;run的调用，这个是epoll，也是唯一会block的地方。这个调用会填充this_thread.private_op_queue，这是个queue，里面装的operation。&lt;/li&gt;
+&lt;li&gt;task_cleanup::~task_cleanup在出了这个scope后被调用，这个函数把那个this_thread.private_op_queue接到scheduler.op_queue后，再接一个scheduler.task_operation_（这本质上是个标志，标记着一次epoll后所有op的结尾）。&lt;/li&gt;
+&lt;li&gt;scheduler.op_queue里有东西，那么do_run_one就会一直不停的运行下去，走到&lt;code&gt;o == &amp;amp;task_operation_&lt;/code&gt;的else分支里，那里完成了对op的回调。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;值得注意的是，在回调中，也是有可能继续插入新的op到这个op_queue中。一旦这个op_queue不为空，就不能block。但如果原来epoll_wait的时候拿到的op执行完了怎么办？好说，epoll_wait的timeout指定为0就可以了。&lt;/p&gt;
+&lt;p&gt;这样一来，最基本的运行流程就清晰了。&lt;/p&gt;
+&lt;h1 id=&#34;io_object与service的对应关系&#34;&gt;io_object与service的对应关系&lt;/h1&gt;
+&lt;p&gt;asio是个很boost的库，意思就是模板和宏满天飞，看代码的时候对各种template的名称（可能也是叫Concept）有一定程度的敏感，知道这个名称代表的类满足了什么需求。&lt;/p&gt;</description>
+    </item>
+    
+  </channel>
+</rss>
