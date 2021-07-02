@@ -6,7 +6,7 @@
     <description>存留处 (Posts)</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Tue, 24 Mar 2020 21:54:51 +0800</lastBuildDate>
+    <lastBuildDate>Thu, 24 Dec 2020 21:54:51 +0800</lastBuildDate>
     
     <atom:link href="https://ivkus.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
     
@@ -14,7 +14,7 @@
     <item>
       <title>Systemd阅读笔记</title>
       <link>https://ivkus.github.io/posts/systemd_read/</link>
-      <pubDate>Tue, 24 Mar 2020 21:54:51 +0800</pubDate>
+      <pubDate>Thu, 24 Dec 2020 21:54:51 +0800</pubDate>
       
       <guid>https://ivkus.github.io/posts/systemd_read/</guid>
       <description>&lt;p&gt;Systemd的争议挺大的，不来看看大家为什么抵制它吗？&lt;/p&gt;
@@ -132,6 +132,34 @@
 
 r &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; manager_add_job(m, JOB_START, target, JOB_ISOLATE, NULL, &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;error, &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;job);
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;看签名的话，&lt;code&gt;manager_add_job&lt;/code&gt;会返回一个job给我们，但是job却不是这个函数里分配的。函数里用了一个临时的Transaction来处理依赖，在transaction里有一个&lt;code&gt;anchor_job&lt;/code&gt;，就是我们所请求的起始job。函数最终返回的就是这个&lt;code&gt;anchor_job&lt;/code&gt;。&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>多线程交互的思考</title>
+      <link>https://ivkus.github.io/posts/thinking_in_multithread/</link>
+      <pubDate>Sat, 21 Mar 2020 21:41:48 +0800</pubDate>
+      
+      <guid>https://ivkus.github.io/posts/thinking_in_multithread/</guid>
+      <description>&lt;p&gt;最近开始写多线程的程序，整理一下对多线程代码的思考。&lt;/p&gt;
+&lt;h1 id=&#34;用多线程的时机&#34;&gt;用多线程的时机&lt;/h1&gt;
+&lt;p&gt;多线程为任务划分提供了天然的要求。如果能抽象出来流水线的业务模型，&lt;/p&gt;
+&lt;h1 id=&#34;线程间交互&#34;&gt;线程间交互&lt;/h1&gt;
+&lt;p&gt;虽说操作系统或、C库或者语言给应用层提供了多种线程交互的方式，包括但不限于锁、信号量，但线程之间最好还是不要有什么交互，这样才是最安全的。&lt;/p&gt;
+&lt;p&gt;退而求其次，多个线程之间只有一个交互点：无锁队列，这种编程模型交互很清晰，也不容易出错。一个好的无锁fifo实现是必要的。&lt;/p&gt;
+&lt;h1 id=&#34;日志&#34;&gt;日志&lt;/h1&gt;
+&lt;p&gt;多线程框架下，日志也是需要考量的一个重要组件。对C++来说，根据编译条件开启、关闭部分代码可以达到加速的效果，虽然很微小，但还是要做。日志就是属于这样的一种代码。&lt;/p&gt;
+&lt;h1 id=&#34;无锁队列&#34;&gt;无锁队列&lt;/h1&gt;
+&lt;p&gt;无锁队列只需要关注memory order就能实现交互，犯不着把进程切出去，独占CPU。看着好浪费呀。确实，对于time critical的应用，只能busy loop。&lt;/p&gt;
+&lt;p&gt;无锁队列也有很多种，从使用上来看，队列里放定长数据还是不定长数据，其实现方法是完全不一样的。定长item的要简单一点，in/out节点可以用2个atomic来指代下标就可以了。不定长的实现我现在还没有见到过，但不定长的话，怎么解决回绕的问题，想必也是有点头疼的。&lt;/p&gt;
+&lt;p&gt;为了避免思考回绕怎怎么解决，我倒是想到了可以采用指针+memory pool的方式，这对内存管理又提出了很高的要求。&lt;/p&gt;
+&lt;p&gt;所以还是结合业务来看，如果能接受一定量的空间冗余，把自己的msg都包到一个union里，这倒是不错的选择。要知道，定长的也不一定慢，我自己在机器上测过一些数据，找个时间系统的来重新测试一遍。&lt;/p&gt;
+&lt;p&gt;前提是，要知道memory model是怎么回事。这个东西我以前也没觉得有什么，直到自己遇到这个问题了，才发现是个大坑。当跳出写业务逻辑的宿命，想研究一点硬的东西，这应该是会首先遇到的拦路虎。不过一旦想明白了，也就忘了起初求索的艰辛。这种面对问题后的心理经过，倒是值得探究一下。&lt;/p&gt;
+&lt;h1 id=&#34;网络栈&#34;&gt;网络栈&lt;/h1&gt;
+&lt;p&gt;网络协议本身只是一种约定而已，搞明白协议要干啥后，实现协议也只是一种相对简单的体力活。2019年底起花了点时间把内核的协议栈了解了一下，到2020年初的时候去掉了内核协议栈的神秘感。没有了敬畏后，后面的事儿就好说了，按需索取。&lt;/p&gt;
+&lt;p&gt;比如，抓包要用packet socket，如果protocol指定为0，那么在应用层是不会收到任何包的；这个在man page里没有提及，也是在看内核的时候想到的。
+可以用mmap的方式来抓包，这也是libpcap用的方法。这居然还对应着不同的版本，每个版本用的内存模型和header结构也不一样。在看这些代码的时候，仿佛看到了各个大公司里的某些个小人物，也就几个人吧，推动着世界上某个重要东西的发展。我能想象到一个黄昏的下午，一个程序员改好代码，写好文档，躺下休息的情况。在这个场景后，世界上的抓包程序的写法就定了，造物主也无法再改变什么。&lt;/p&gt;
+&lt;p&gt;更过分的是绕过kernel，从网卡上自己收。反正也是要低延时了，抛开一切自己搞，while true receive frame，送到队列里交给下个线程处理。&lt;/p&gt;
+&lt;p&gt;多线程天生适合这种pipeline的方式处理数据。&lt;/p&gt;</description>
     </item>
     
     <item>
