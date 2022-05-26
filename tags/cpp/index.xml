@@ -6,10 +6,152 @@
     <description>存留处 (cpp)</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Sat, 21 Mar 2020 21:41:48 +0800</lastBuildDate>
+    <lastBuildDate>Thu, 26 May 2022 18:36:33 +0800</lastBuildDate>
     
     <atom:link href="https://ivkus.github.io/tags/cpp/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>【翻译】c&#43;&#43;类中“空成员”的优化</title>
+      <link>https://ivkus.github.io/posts/cpp_emptyclass_opt/</link>
+      <pubDate>Thu, 26 May 2022 18:36:33 +0800</pubDate>
+      
+      <guid>https://ivkus.github.io/posts/cpp_emptyclass_opt/</guid>
+      <description>&lt;p&gt;本文来自于&lt;a href=&#34;http://www.cantrip.org/emptyopt.html&#34;&gt;The &amp;ldquo;Empty Member&amp;rdquo; C++ Optimization&lt;/a&gt;。是我在看c++ std::string代码时遇到的一个链接，其中解释了为什么_Alloc_hider会采用inhert from Alloc的原因。&lt;/p&gt;
+&lt;p&gt;文章应该是97年的，所以里面的指针长度还是4 byte。&lt;/p&gt;
+&lt;h1 id=&#34;c类中空成员的优化&#34;&gt;c++类中“空成员”的优化&lt;/h1&gt;
+&lt;p&gt;C++标准库中有很多有用的模板，包括享誉盛名的&lt;a href=&#34;http://www.sgi.com/tech/stl&#34;&gt;SGI STL&lt;/a&gt;。这些模板的实现很高效，也不失灵活。在日常的编程中，可以把这些模板当作范例来进行学习，也可启发我们如何进行兼顾灵活性与效率的程序设计。&lt;/p&gt;
+&lt;p&gt;“空成员”的优化，就是这样的一个典范：一个没有类成员的class，就不应该占用内存空间。什么情况下需要一个没有类成员的class呢？这样的class一般会拥有一系列的typedef或者成员函数，而程序的调用方可以用自己定义的类似的class来完成一些特殊的功能（自定义的class可不一定没有类成员）。这个默认提供的class应该可以满足绝大多数的需求。这种情况下，优化这个空成员的class是个很有性价比的事情。&lt;/p&gt;
+&lt;p&gt;由于语言的限制（之后会解释），空成员的class通常会占据一定的内存空间。如果是一般情况也就算了，但是在stl里，不进行优化的话，还是会劝退很多潜在的使用者的。&lt;/p&gt;
+&lt;h2 id=&#34;空成员膨胀&#34;&gt;空成员“膨胀”&lt;/h2&gt;
+&lt;p&gt;以STL举例。每个STL的容器都有一个allocator的参数，当容器需要内存的时候，它会向allocator去申请。如果用户想要自己定制化内存申请过程，那么就可以在构造容器时提供自己的allocator。大多数情况下，容器用的是STL默认的allocator，这个默认的allocator直接调用new来完成分配。这是个空类，类似于下面这个定义&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;T&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;allocator&lt;/span&gt; {   &lt;span style=&#34;color:#75715e&#34;&gt;// an empty class
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;      . . .
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; T&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; allocate(size_t n)
+        { &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; (T&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;) &lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;operator&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;new&lt;/span&gt;(n &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;sizeof&lt;/span&gt; T); }
+      . . .
+    };
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;举个list的例子，class list保存了一个私有的allocator成员，这个成员在构造函数里进行赋值&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;T&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Alloc&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; allocator&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;T&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt; {
+      . . .
+      Alloc alloc_; 
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Node&lt;/span&gt; { . . . };
+      Node&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; head_;      
+
+     &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;explicit&lt;/span&gt; list(Alloc &lt;span style=&#34;color:#66d9ef&#34;&gt;const&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt; a &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Alloc())
+        &lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; alloc_(a) { . . . }
+      . . .
+    };
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;成员&lt;code&gt;list&amp;lt;&amp;gt;::alloc_&lt;/code&gt;通常占据4 byte，尽管这个&lt;code&gt;Alloc&lt;/code&gt;是个空类。这通常来说不太会是个问题。但万一list自身是一个巨大的数据结构的一个节点（比如vector&lt;!-- raw HTML omitted --&gt;)，当vector很大的时候，这种额外的空间消耗是不可忽视的。巨大的内存占用意味着更慢的执行速度。就算在当下，相对于cpu自身的频率来说，内存访问已经非常慢了。&lt;/p&gt;
+&lt;h2 id=&#34;空对象&#34;&gt;空对象&lt;/h2&gt;
+&lt;p&gt;那么改怎么解决这个问题？解决问题之前，首先需要搞清楚为什么这里会有这一层开销。C++的语言定义是这么说的：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;A class with an empty sequence of members and base class objects is an empty class. Complete objects and member subobjects of an empty class type shall have nonzero size.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;空类：没有数据成员，并且没有基类。这个基类实例化出来的完整对象的大小不应该为0.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;解释以下这个规定的缘由：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Bar&lt;/span&gt; { };
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Foo&lt;/span&gt; {
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Bar&lt;/span&gt; a[&lt;span style=&#34;color:#ae81ff&#34;&gt;2&lt;/span&gt;];
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Bar&lt;/span&gt; b;
+  };
+  Foo f;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;那么&lt;code&gt;f.b&lt;/code&gt;和&lt;code&gt;f.a[]&lt;/code&gt;分别是什么？如果&lt;code&gt;sizeof(Bar)&lt;/code&gt;是0，那么这2个地址就是一样的。如果你用地址来作为对象的标识，那么&lt;code&gt;f.b&lt;/code&gt;和&lt;code&gt;f.a[0]&lt;/code&gt;就是同一个对象了。C++标准委员会通过禁止空类的对象大小为0来解决这个问题。&lt;/p&gt;
+&lt;p&gt;但为什么还需要占据4 byte的大小呢？虽然大部分的编译器认为&lt;code&gt;sizeof(Bar) == 1&lt;/code&gt;，但4 byte是对象对齐的需求。比如：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Baz&lt;/span&gt; {
+    Bar b;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; p;
+  };
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;结构体&lt;code&gt;Baz&lt;/code&gt;在大多数的体系结构上大小是8 byte，编译器自己在Baz::b后面添加了补齐，是为了让Baz::p不会横跨一个字(word)。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;  struct Baz
+  +-----------------------------------+
+  | +-------+-------+-------+-------+ |
+  | | Bar b | XXXXX | XXXXX | XXXXX | |
+  | +-------+-------+-------+-------+ |
+  | +-------------------------------+ |
+  | | int* p                        | |
+  | +-------------------------------+ |
+  +-----------------------------------+
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;那该如何规避调这个额外的开销呢？C++标准也在Footnote里提了一嘴：&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;A base class subobject of an empty class type may have zero size.
+空类作为基类时，其大小可以为0&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;也就是说，如果是这个结构体&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;  struct Baz2 : Bar {
+    int* p;
+  };
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;编译器就会认为Bar的大小为0，这样sizeof(Baz2)就是4。&lt;/p&gt;
+&lt;pre&gt;&lt;code&gt;  struct Baz2
+  +-----------------------------------+
+  | +-------------------------------+ |
+  | | int* p                        | |
+  | +-------------------------------+ |
+  +-----------------------------------+
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;编译器并未要求实现成这个样子，但是你可以认为大部分标准的编译器就是这样实现的。&lt;/p&gt;
+&lt;h2 id=&#34;消除膨胀&#34;&gt;消除膨胀&lt;/h2&gt;
+&lt;p&gt;现在你知道了消除这个开销的原理了，问题是接下来怎么做？最直观的，list&amp;lt;&amp;gt;直接继承Allocator，如下：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;T&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Alloc&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; allocator&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;T&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;private&lt;/span&gt; Alloc {
+      . . .
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Node&lt;/span&gt; { . . . };
+      Node&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; head_;      
+
+     &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;explicit&lt;/span&gt; list(Alloc &lt;span style=&#34;color:#66d9ef&#34;&gt;const&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt; a &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Alloc())
+        &lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; Alloc(a) { . . . }
+      . . .
+    };
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这当然是可以的。list里的成员函数可以直接调用&lt;code&gt;this-&amp;gt;allocate()&lt;/code&gt;，而非&lt;code&gt;allco_.allocate()&lt;/code&gt;完成内存申请。
+不过，用户提供的Alloc是允许拥有虚函数的，这可能会和子类list&amp;lt;&amp;gt;里的某些方法有冲突。（&lt;code&gt;list&amp;lt;&amp;gt;::init&lt;/code&gt;和&lt;code&gt;Alloc::init()&lt;/code&gt;)。&lt;/p&gt;
+&lt;p&gt;另一种可行的方式是，将Alloc打包到list&amp;lt;&amp;gt;的成员变量上(比如指向第一个list node的指针)，这样Allocator的接口不会暴露出来。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;T&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Alloc&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; allocator&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;T&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt; {
+      . . .
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Node&lt;/span&gt; { . . . };
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;P&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt; Alloc {
+        P(Alloc &lt;span style=&#34;color:#66d9ef&#34;&gt;const&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt; a) &lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; Alloc(a), p(&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;) { }
+        Node&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; p;
+      };
+      P head_;
+      
+     &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;explicit&lt;/span&gt; list(Alloc &lt;span style=&#34;color:#66d9ef&#34;&gt;const&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt; a &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Alloc())
+        &lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; head_(a) { . . . }
+      . . .
+    };
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;采用这种方法实现的话，申请内存就用&lt;code&gt;head.allocate()&lt;/code&gt;。没有额外的开销，list&amp;lt;&amp;gt;用起来也和以前一样。不过就像其他做的好的优化一样，实现上总是有点丑陋，但总归不会影响到接口了。&lt;/p&gt;
+&lt;h2 id=&#34;统一一点的解决方案&#34;&gt;统一一点的解决方案&lt;/h2&gt;
+&lt;p&gt;当然还有提升的空间了。看看下面这个template&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Base&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Member&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;BaseOpt&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; Base {
+      Member m;
+      BaseOpt(Base &lt;span style=&#34;color:#66d9ef&#34;&gt;const&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt; b, Member &lt;span style=&#34;color:#66d9ef&#34;&gt;const&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt; mem) 
+        &lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; Base(b), m(mem) { }
+    };
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;用这个模板，那么list的接口就可以变成这样：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;T&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Alloc&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; allocator&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;T&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt; {
+      . . .
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Node&lt;/span&gt; { . . . };
+      BaseOpt&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;Alloc,Node&lt;span style=&#34;color:#f92672&#34;&gt;*&amp;gt;&lt;/span&gt; head_;
+      
+     &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;explicit&lt;/span&gt; list(Alloc &lt;span style=&#34;color:#66d9ef&#34;&gt;const&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt; a &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; Alloc())
+        &lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; head_(a,&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;) { . . . }
+      . . .
+    };
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这个实现相比与最开始的版本，看起来也没那么不堪了。其他的STL容器，也可以借助BaseOpt来简化代码。只不过，成员函数申请内存的时候就会奇怪一些了，这个我们现在还暂时不考虑了。&lt;/p&gt;
+&lt;p&gt;现在可以在BaseOpt定义的地方加上很好的文档来描述这个优化技术了。&lt;/p&gt;
+&lt;p&gt;也可以在BaseOpt里添加一些成员，但是并不建议这样做。这可能会造成和Base里名称冲突（就像我们在第一次尝试消除膨胀的代码里一样）。&lt;/p&gt;
+&lt;h2 id=&#34;收尾&#34;&gt;收尾&lt;/h2&gt;
+&lt;p&gt;这项技术可以在当下通用的编译器里使用。就算编译器没有实现空基类优化，也没有额外的开销。&lt;/p&gt;</description>
+    </item>
     
     <item>
       <title>多线程交互的思考</title>
@@ -19,24 +161,26 @@
       <guid>https://ivkus.github.io/posts/thinking_in_multithread/</guid>
       <description>&lt;p&gt;最近开始写多线程的程序，整理一下对多线程代码的思考。&lt;/p&gt;
 &lt;h1 id=&#34;用多线程的时机&#34;&gt;用多线程的时机&lt;/h1&gt;
-&lt;p&gt;多线程为任务划分提供了天然的要求。如果能抽象出来流水线的业务模型，&lt;/p&gt;
+&lt;p&gt;多线程为任务划分提供了天然的要求。如果能抽象出来流水线的业务模型，便有了多线程的用武之地。&lt;/p&gt;
 &lt;h1 id=&#34;线程间交互&#34;&gt;线程间交互&lt;/h1&gt;
 &lt;p&gt;虽说操作系统或、C库或者语言给应用层提供了多种线程交互的方式，包括但不限于锁、信号量，但线程之间最好还是不要有什么交互，这样才是最安全的。&lt;/p&gt;
-&lt;p&gt;退而求其次，多个线程之间只有一个交互点：无锁队列，这种编程模型交互很清晰，也不容易出错。一个好的无锁fifo实现是必要的。&lt;/p&gt;
-&lt;h1 id=&#34;日志&#34;&gt;日志&lt;/h1&gt;
-&lt;p&gt;多线程框架下，日志也是需要考量的一个重要组件。对C++来说，根据编译条件开启、关闭部分代码可以达到加速的效果，虽然很微小，但还是要做。日志就是属于这样的一种代码。&lt;/p&gt;
-&lt;h1 id=&#34;无锁队列&#34;&gt;无锁队列&lt;/h1&gt;
+&lt;p&gt;退而求其次，多个线程之间只有一个交互点：无锁队列，这种编程模型交互很清晰，也不容易出错。一个好的无锁fifo实现是必要的。
+多线程天生适合这种pipeline的方式处理数据。&lt;/p&gt;
+&lt;h2 id=&#34;无锁队列&#34;&gt;无锁队列&lt;/h2&gt;
 &lt;p&gt;无锁队列只需要关注memory order就能实现交互，犯不着把进程切出去，独占CPU。看着好浪费呀。确实，对于time critical的应用，只能busy loop。&lt;/p&gt;
 &lt;p&gt;无锁队列也有很多种，从使用上来看，队列里放定长数据还是不定长数据，其实现方法是完全不一样的。定长item的要简单一点，in/out节点可以用2个atomic来指代下标就可以了。不定长的实现我现在还没有见到过，但不定长的话，怎么解决回绕的问题，想必也是有点头疼的。&lt;/p&gt;
 &lt;p&gt;为了避免思考回绕怎怎么解决，我倒是想到了可以采用指针+memory pool的方式，这对内存管理又提出了很高的要求。&lt;/p&gt;
 &lt;p&gt;所以还是结合业务来看，如果能接受一定量的空间冗余，把自己的msg都包到一个union里，这倒是不错的选择。要知道，定长的也不一定慢，我自己在机器上测过一些数据，找个时间系统的来重新测试一遍。&lt;/p&gt;
-&lt;p&gt;前提是，要知道memory model是怎么回事。这个东西我以前也没觉得有什么，直到自己遇到这个问题了，才发现是个大坑。当跳出写业务逻辑的宿命，想研究一点硬的东西，这应该是会首先遇到的拦路虎。不过一旦想明白了，也就忘了起初求索的艰辛。这种面对问题后的心理经过，倒是值得探究一下。&lt;/p&gt;
+&lt;h2 id=&#34;多线程下的内存管理&#34;&gt;多线程下的内存管理&lt;/h2&gt;
+&lt;p&gt;pipeline工作模式下内存管理有一个思路，就是线程间只传递指针，具体的数据结构在最开始的线程中进行分配（可以用pool的方式来优化），也只能在最开始的线程进行释放。线程间有2个queue，前向+后向。每个线程用完后决定继续往后面传递还是回传到上一个线程。增加了一点程序编写的复杂度，换来对内存管理的简化。&lt;/p&gt;
+&lt;h1 id=&#34;日志&#34;&gt;日志&lt;/h1&gt;
+&lt;p&gt;多线程框架下，日志也是需要考量的一个重要组件。对C++来说，根据编译条件开启、关闭部分代码可以达到加速的效果，虽然很微小，但还是要做。日志就是属于这样的一种代码。&lt;/p&gt;
+&lt;p&gt;除了boost.log/spdlog/glog等比较老派的日志库，后面出现的NanoLog算是开辟了新纪元，二进制日志保证了吞吐，强类型日志保证了速度。但是format本身的确是一个耗时的操作，实际操作中打日志一般会放在单独的线程中进行。&lt;/p&gt;
 &lt;h1 id=&#34;网络栈&#34;&gt;网络栈&lt;/h1&gt;
-&lt;p&gt;网络协议本身只是一种约定而已，搞明白协议要干啥后，实现协议也只是一种相对简单的体力活。2019年底起花了点时间把内核的协议栈了解了一下，到2020年初的时候去掉了内核协议栈的神秘感。没有了敬畏后，后面的事儿就好说了，按需索取。&lt;/p&gt;
+&lt;p&gt;网络协议本身只是一种约定而已，搞明白协议要干啥后，实现协议也只是一种相对简单的体力活。&lt;/p&gt;
 &lt;p&gt;比如，抓包要用packet socket，如果protocol指定为0，那么在应用层是不会收到任何包的；这个在man page里没有提及，也是在看内核的时候想到的。
 可以用mmap的方式来抓包，这也是libpcap用的方法。这居然还对应着不同的版本，每个版本用的内存模型和header结构也不一样。在看这些代码的时候，仿佛看到了各个大公司里的某些个小人物，也就几个人吧，推动着世界上某个重要东西的发展。我能想象到一个黄昏的下午，一个程序员改好代码，写好文档，躺下休息的情况。在这个场景后，世界上的抓包程序的写法就定了，造物主也无法再改变什么。&lt;/p&gt;
-&lt;p&gt;更过分的是绕过kernel，从网卡上自己收。反正也是要低延时了，抛开一切自己搞，while true receive frame，送到队列里交给下个线程处理。&lt;/p&gt;
-&lt;p&gt;多线程天生适合这种pipeline的方式处理数据。&lt;/p&gt;</description>
+&lt;p&gt;想要更高的性能，就需要绕过kernel，从网卡上自己收。反正也是要低延时了，抛开一切自己搞，while true receive frame，送到队列里交给下个线程处理。市面上常见的方法有DPDK，主要对接的是Intel自己的网卡。还有一些其他的专门做低延迟的网卡，比如solarflare和exanic，有自己单独的lib和kernel module。&lt;/p&gt;</description>
     </item>
     
     <item>

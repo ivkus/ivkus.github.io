@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+
+
+<html lang="zh-cn" data-theme="">
+<head>
+    
+        
+<meta charset="utf-8">
+<meta name="HandheldFriendly" content="True">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer-when-downgrade">
+
+<title>【翻译】c&#43;&#43;类中“空成员”的优化 - 存留处</title>
+<meta name="description" content="">
+
+<link rel="icon" type="image/x-icon" href="https://ivkus.github.io/favicon.ico">
+<link rel="apple-touch-icon-precomposed" href="https://ivkus.github.io/favicon.png">
+
+
+
+    
+
+
+
+
+
+    
+    
+    
+
+    
+        <link rel="stylesheet" href="https://ivkus.github.io/css/style.03fcbf2f5adfa317daeecc510bd9aa2cd268b14a385fc2498842fa5602e937f2.css" integrity="sha256-A/y/L1rfoxfa7sxRC9mqLNJosUo4X8JJiEL6VgLpN/I=">
+    
+
+
+
+
+
+<meta property="og:title" content="【翻译】c&#43;&#43;类中“空成员”的优化" />
+<meta property="og:description" content="本文来自于The &ldquo;Empty Member&rdquo; C&#43;&#43; Optimization。是我在看c&#43;&#43; std::string代码时遇到的一个链接，其中解释了为什么_Alloc_hider会采用inhert from Alloc的原因。
+文章应该是97年的，所以里面的指针长度还是4 byte。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ivkus.github.io/posts/cpp_emptyclass_opt/" />
+<meta property="article:published_time" content="2022-05-26T18:36:33+08:00" />
+<meta property="article:modified_time" content="2022-05-26T18:36:33+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="【翻译】c&#43;&#43;类中“空成员”的优化"/>
+<meta name="twitter:description" content="本文来自于The &ldquo;Empty Member&rdquo; C&#43;&#43; Optimization。是我在看c&#43;&#43; std::string代码时遇到的一个链接，其中解释了为什么_Alloc_hider会采用inhert from Alloc的原因。
+文章应该是97年的，所以里面的指针长度还是4 byte。"/>
+
+
+
+
+
+
+
+
+
+
+
+    
+</head>
+<body>
+    <a class="skip-main" href="#main">Skip to main content</a>
+    <div class="container">
+        <header class="common-header"> 
+            
+                <div class="header-top">
+    <h1 class="site-title">
+        <a href="/">存留处</a>
+    </h1>
+    <ul class="social-icons">
+
+
+</ul>
+
+</div>
+
+    <nav>
+        
+        
+        <a class="" href="https://ivkus.github.io/posts/" title="Archive">Archive</a>
+        
+        <a class="" href="https://ivkus.github.io/tags/" title="">Tags</a>
+        
+        <a class="" href="https://ivkus.github.io/about/" title="">About</a>
+        
+    </nav>
+
+
+
+
+            
+        </header>
+        <main id="main" tabindex="-1"> 
+            
+    
+    
+    <article class="post h-entry">
+        <header class="post-header">
+            <h1 class="p-name post-title">【翻译】c&#43;&#43;类中“空成员”的优化</h1>
+        </header>
+        <div class="content e-content">
+            <p>本文来自于<a href="http://www.cantrip.org/emptyopt.html">The &ldquo;Empty Member&rdquo; C++ Optimization</a>。是我在看c++ std::string代码时遇到的一个链接，其中解释了为什么_Alloc_hider会采用inhert from Alloc的原因。</p>
+<p>文章应该是97年的，所以里面的指针长度还是4 byte。</p>
+<h1 id="c类中空成员的优化">c++类中“空成员”的优化</h1>
+<p>C++标准库中有很多有用的模板，包括享誉盛名的<a href="http://www.sgi.com/tech/stl">SGI STL</a>。这些模板的实现很高效，也不失灵活。在日常的编程中，可以把这些模板当作范例来进行学习，也可启发我们如何进行兼顾灵活性与效率的程序设计。</p>
+<p>“空成员”的优化，就是这样的一个典范：一个没有类成员的class，就不应该占用内存空间。什么情况下需要一个没有类成员的class呢？这样的class一般会拥有一系列的typedef或者成员函数，而程序的调用方可以用自己定义的类似的class来完成一些特殊的功能（自定义的class可不一定没有类成员）。这个默认提供的class应该可以满足绝大多数的需求。这种情况下，优化这个空成员的class是个很有性价比的事情。</p>
+<p>由于语言的限制（之后会解释），空成员的class通常会占据一定的内存空间。如果是一般情况也就算了，但是在stl里，不进行优化的话，还是会劝退很多潜在的使用者的。</p>
+<h2 id="空成员膨胀">空成员“膨胀”</h2>
+<p>以STL举例。每个STL的容器都有一个allocator的参数，当容器需要内存的时候，它会向allocator去申请。如果用户想要自己定制化内存申请过程，那么就可以在构造容器时提供自己的allocator。大多数情况下，容器用的是STL默认的allocator，这个默认的allocator直接调用new来完成分配。这是个空类，类似于下面这个定义</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">template</span> <span style="color:#f92672">&lt;</span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">T</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">allocator</span> {   <span style="color:#75715e">// an empty class
+</span><span style="color:#75715e"></span>      . . .
+      <span style="color:#66d9ef">static</span> T<span style="color:#f92672">*</span> allocate(size_t n)
+        { <span style="color:#66d9ef">return</span> (T<span style="color:#f92672">*</span>) <span style="color:#f92672">::</span><span style="color:#66d9ef">operator</span> <span style="color:#66d9ef">new</span>(n <span style="color:#f92672">*</span> <span style="color:#66d9ef">sizeof</span> T); }
+      . . .
+    };
+</code></pre></div><p>举个list的例子，class list保存了一个私有的allocator成员，这个成员在构造函数里进行赋值</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">template</span> <span style="color:#f92672">&lt;</span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">T</span>, <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Alloc</span> <span style="color:#f92672">=</span> allocator<span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;</span> <span style="color:#f92672">&gt;</span>
+    <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">list</span> {
+      . . .
+      Alloc alloc_; 
+      <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">Node</span> { . . . };
+      Node<span style="color:#f92672">*</span> head_;      
+
+     <span style="color:#66d9ef">public</span><span style="color:#f92672">:</span>
+      <span style="color:#66d9ef">explicit</span> list(Alloc <span style="color:#66d9ef">const</span><span style="color:#f92672">&amp;</span> a <span style="color:#f92672">=</span> Alloc())
+        <span style="color:#f92672">:</span> alloc_(a) { . . . }
+      . . .
+    };
+</code></pre></div><p>成员<code>list&lt;&gt;::alloc_</code>通常占据4 byte，尽管这个<code>Alloc</code>是个空类。这通常来说不太会是个问题。但万一list自身是一个巨大的数据结构的一个节点（比如vector<!-- raw HTML omitted -->)，当vector很大的时候，这种额外的空间消耗是不可忽视的。巨大的内存占用意味着更慢的执行速度。就算在当下，相对于cpu自身的频率来说，内存访问已经非常慢了。</p>
+<h2 id="空对象">空对象</h2>
+<p>那么改怎么解决这个问题？解决问题之前，首先需要搞清楚为什么这里会有这一层开销。C++的语言定义是这么说的：</p>
+<blockquote>
+<p>A class with an empty sequence of members and base class objects is an empty class. Complete objects and member subobjects of an empty class type shall have nonzero size.</p>
+</blockquote>
+<blockquote>
+<p>空类：没有数据成员，并且没有基类。这个基类实例化出来的完整对象的大小不应该为0.</p>
+</blockquote>
+<p>解释以下这个规定的缘由：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">Bar</span> { };
+  <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">Foo</span> {
+    <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">Bar</span> a[<span style="color:#ae81ff">2</span>];
+    <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">Bar</span> b;
+  };
+  Foo f;
+</code></pre></div><p>那么<code>f.b</code>和<code>f.a[]</code>分别是什么？如果<code>sizeof(Bar)</code>是0，那么这2个地址就是一样的。如果你用地址来作为对象的标识，那么<code>f.b</code>和<code>f.a[0]</code>就是同一个对象了。C++标准委员会通过禁止空类的对象大小为0来解决这个问题。</p>
+<p>但为什么还需要占据4 byte的大小呢？虽然大部分的编译器认为<code>sizeof(Bar) == 1</code>，但4 byte是对象对齐的需求。比如：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">Baz</span> {
+    Bar b;
+    <span style="color:#66d9ef">int</span><span style="color:#f92672">*</span> p;
+  };
+</code></pre></div><p>结构体<code>Baz</code>在大多数的体系结构上大小是8 byte，编译器自己在Baz::b后面添加了补齐，是为了让Baz::p不会横跨一个字(word)。</p>
+<pre><code>  struct Baz
+  +-----------------------------------+
+  | +-------+-------+-------+-------+ |
+  | | Bar b | XXXXX | XXXXX | XXXXX | |
+  | +-------+-------+-------+-------+ |
+  | +-------------------------------+ |
+  | | int* p                        | |
+  | +-------------------------------+ |
+  +-----------------------------------+
+</code></pre><p>那该如何规避调这个额外的开销呢？C++标准也在Footnote里提了一嘴：</p>
+<blockquote>
+<p>A base class subobject of an empty class type may have zero size.
+空类作为基类时，其大小可以为0</p>
+</blockquote>
+<p>也就是说，如果是这个结构体</p>
+<pre><code>  struct Baz2 : Bar {
+    int* p;
+  };
+</code></pre><p>编译器就会认为Bar的大小为0，这样sizeof(Baz2)就是4。</p>
+<pre><code>  struct Baz2
+  +-----------------------------------+
+  | +-------------------------------+ |
+  | | int* p                        | |
+  | +-------------------------------+ |
+  +-----------------------------------+
+</code></pre><p>编译器并未要求实现成这个样子，但是你可以认为大部分标准的编译器就是这样实现的。</p>
+<h2 id="消除膨胀">消除膨胀</h2>
+<p>现在你知道了消除这个开销的原理了，问题是接下来怎么做？最直观的，list&lt;&gt;直接继承Allocator，如下：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">template</span> <span style="color:#f92672">&lt;</span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">T</span>, <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Alloc</span> <span style="color:#f92672">=</span> allocator<span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;</span> <span style="color:#f92672">&gt;</span>
+    <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">list</span> <span style="color:#f92672">:</span> <span style="color:#66d9ef">private</span> Alloc {
+      . . .
+      <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">Node</span> { . . . };
+      Node<span style="color:#f92672">*</span> head_;      
+
+     <span style="color:#66d9ef">public</span><span style="color:#f92672">:</span>
+      <span style="color:#66d9ef">explicit</span> list(Alloc <span style="color:#66d9ef">const</span><span style="color:#f92672">&amp;</span> a <span style="color:#f92672">=</span> Alloc())
+        <span style="color:#f92672">:</span> Alloc(a) { . . . }
+      . . .
+    };
+</code></pre></div><p>这当然是可以的。list里的成员函数可以直接调用<code>this-&gt;allocate()</code>，而非<code>allco_.allocate()</code>完成内存申请。
+不过，用户提供的Alloc是允许拥有虚函数的，这可能会和子类list&lt;&gt;里的某些方法有冲突。（<code>list&lt;&gt;::init</code>和<code>Alloc::init()</code>)。</p>
+<p>另一种可行的方式是，将Alloc打包到list&lt;&gt;的成员变量上(比如指向第一个list node的指针)，这样Allocator的接口不会暴露出来。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">template</span> <span style="color:#f92672">&lt;</span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">T</span>, <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Alloc</span> <span style="color:#f92672">=</span> allocator<span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;</span> <span style="color:#f92672">&gt;</span>
+    <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">list</span> {
+      . . .
+      <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">Node</span> { . . . };
+      <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">P</span> <span style="color:#f92672">:</span> <span style="color:#66d9ef">public</span> Alloc {
+        P(Alloc <span style="color:#66d9ef">const</span><span style="color:#f92672">&amp;</span> a) <span style="color:#f92672">:</span> Alloc(a), p(<span style="color:#ae81ff">0</span>) { }
+        Node<span style="color:#f92672">*</span> p;
+      };
+      P head_;
+      
+     <span style="color:#66d9ef">public</span><span style="color:#f92672">:</span>
+      <span style="color:#66d9ef">explicit</span> list(Alloc <span style="color:#66d9ef">const</span><span style="color:#f92672">&amp;</span> a <span style="color:#f92672">=</span> Alloc())
+        <span style="color:#f92672">:</span> head_(a) { . . . }
+      . . .
+    };
+</code></pre></div><p>采用这种方法实现的话，申请内存就用<code>head.allocate()</code>。没有额外的开销，list&lt;&gt;用起来也和以前一样。不过就像其他做的好的优化一样，实现上总是有点丑陋，但总归不会影响到接口了。</p>
+<h2 id="统一一点的解决方案">统一一点的解决方案</h2>
+<p>当然还有提升的空间了。看看下面这个template</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">template</span> <span style="color:#f92672">&lt;</span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Base</span>, <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Member</span><span style="color:#f92672">&gt;</span>
+    <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">BaseOpt</span> <span style="color:#f92672">:</span> Base {
+      Member m;
+      BaseOpt(Base <span style="color:#66d9ef">const</span><span style="color:#f92672">&amp;</span> b, Member <span style="color:#66d9ef">const</span><span style="color:#f92672">&amp;</span> mem) 
+        <span style="color:#f92672">:</span> Base(b), m(mem) { }
+    };
+</code></pre></div><p>用这个模板，那么list的接口就可以变成这样：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">template</span> <span style="color:#f92672">&lt;</span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">T</span>, <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">Alloc</span> <span style="color:#f92672">=</span> allocator<span style="color:#f92672">&lt;</span>T<span style="color:#f92672">&gt;</span> <span style="color:#f92672">&gt;</span>
+    <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">list</span> {
+      . . .
+      <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">Node</span> { . . . };
+      BaseOpt<span style="color:#f92672">&lt;</span>Alloc,Node<span style="color:#f92672">*&gt;</span> head_;
+      
+     <span style="color:#66d9ef">public</span><span style="color:#f92672">:</span>
+      <span style="color:#66d9ef">explicit</span> list(Alloc <span style="color:#66d9ef">const</span><span style="color:#f92672">&amp;</span> a <span style="color:#f92672">=</span> Alloc())
+        <span style="color:#f92672">:</span> head_(a,<span style="color:#ae81ff">0</span>) { . . . }
+      . . .
+    };
+</code></pre></div><p>这个实现相比与最开始的版本，看起来也没那么不堪了。其他的STL容器，也可以借助BaseOpt来简化代码。只不过，成员函数申请内存的时候就会奇怪一些了，这个我们现在还暂时不考虑了。</p>
+<p>现在可以在BaseOpt定义的地方加上很好的文档来描述这个优化技术了。</p>
+<p>也可以在BaseOpt里添加一些成员，但是并不建议这样做。这可能会造成和Base里名称冲突（就像我们在第一次尝试消除膨胀的代码里一样）。</p>
+<h2 id="收尾">收尾</h2>
+<p>这项技术可以在当下通用的编译器里使用。就算编译器没有实现空基类优化，也没有额外的开销。</p>
+        </div>
+        
+
+
+<div class="post-info">
+    
+        <div class="post-date dt-published">2022-05-26</div>
+    
+    
+    <a class="post-hidden-url u-url" href="https://ivkus.github.io/posts/cpp_emptyclass_opt/">https://ivkus.github.io/posts/cpp_emptyclass_opt/</a>
+    <a href=https://ivkus.github.io/ class="p-name p-author post-hidden-author h-card" rel="me"></a>
+
+
+    <div class="post-taxonomies">
+        
+            
+                <ul class="post-tags">
+                    
+                        <li><a href="https://ivkus.github.io/tags/cpp">#cpp</a></li>
+                    
+                </ul>
+        
+    </div>
+</div>
+
+    </article>
+
+    
+
+    
+
+    
+
+
+        </main>
+        
+            <footer class="common-footer">
+    
+    
+
+    <div class="common-footer-bottom">
+        
+        <div class="copyright">
+            <p>© 2022<br>
+            Powered by <a target="_blank" rel="noopener noreferrer" href="https://gohugo.io/">Hugo</a>, theme <a target="_blank" rel="noopener noreferrer" href="https://github.com/mitrichius/hugo-theme-anubis">Anubis</a>.<br>
+            
+            </p>  
+        </div> 
+
+        
+
+
+   
+    </div>
+
+    <p class="h-card vcard">
+
+    <a href=https://ivkus.github.io/ class="p-name u-url url fn" rel="me"></a> 
+
+    
+
+    
+</p> 
+</footer>
+
+        
+    </div>
+</body>
+</html>
