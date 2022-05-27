@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+
+
+<html lang="zh-cn" data-theme="">
+<head>
+    
+        
+<meta charset="utf-8">
+<meta name="HandheldFriendly" content="True">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer-when-downgrade">
+
+<title>Systemd阅读笔记 - 存留处</title>
+
+<meta name="description" content="Systemd的争议挺大的，不来看看大家为什么抵制它吗？">
+
+
+
+
+
+<link rel="icon" type="image/x-icon" href="https://ivkus.github.io/favicon.ico">
+<link rel="apple-touch-icon-precomposed" href="https://ivkus.github.io/favicon.png">
+
+
+<style>
+  body {
+    visibility: hidden;
+    opacity: 0;
+  }
+</style>
+
+<noscript>
+  <style>
+    body {
+      visibility: visible;
+      opacity: 1;
+    }
+  </style>
+</noscript>
+
+
+
+    
+
+
+
+
+
+    
+    
+        
+    
+    
+
+    
+        <link rel="stylesheet" href="https://ivkus.github.io/css/style.min.c0f14e5462dab0ccfdd33a7517489c51f8e629cf051234533dce5e88fa29274b.css" integrity="sha256-wPFOVGLasMz90zp1F0icUfjmKc8FEjRTPc5eiPopJ0s=">
+    
+
+
+
+
+
+    
+
+    
+
+
+
+
+
+    
+    
+        
+    
+    
+
+    
+        <script src="https://ivkus.github.io/js/script.min.0ac446ff60cfd2037010e05589e719afdf147b05baf883558bf00ed7a5efb1dc.js" type="text/javascript" charset="utf-8" integrity="sha256-CsRG/2DP0gNwEOBViecZr98UewW6&#43;INVi/AO16Xvsdw="></script>
+    
+
+
+
+
+
+
+
+<meta property="og:title" content="Systemd阅读笔记" />
+<meta property="og:description" content="Systemd的争议挺大的，不来看看大家为什么抵制它吗？" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ivkus.github.io/posts/osc/systemd_read/" />
+<meta property="article:published_time" content="2020-12-24T21:54:51+08:00" />
+<meta property="article:modified_time" content="2020-12-24T21:54:51+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Systemd阅读笔记"/>
+<meta name="twitter:description" content="Systemd的争议挺大的，不来看看大家为什么抵制它吗？"/>
+
+
+
+
+
+
+
+
+
+
+
+    
+</head>
+<body>
+    <a class="skip-main" href="#main">Skip to main content</a>
+    <div class="container">
+        <header class="common-header"> 
+            
+                <div class="header-top">
+    <h1 class="site-title">
+    <a href="/">存留处</a>
+</h1>
+    <ul class="social-icons">
+
+
+
+
+
+</ul>
+</div>
+
+    <nav>
+        
+        
+        <a class="" href="https://ivkus.github.io/posts/" title="Archive">Archive</a>
+        
+        <a class="" href="https://ivkus.github.io/tags/" title="">Tags</a>
+        
+        <a class="" href="https://ivkus.github.io/about/" title="">About</a>
+        
+    </nav>
+
+
+
+
+            
+        </header>
+        <main id="main" tabindex="-1"> 
+            
+    
+
+    <article class="post h-entry">
+        <div class="post-header">
+            <header>
+                <h1 class="p-name post-title">Systemd阅读笔记</h1>
+
+                
+            </header>
+        </div>
+        <div class="content e-content">
+            <p>Systemd的争议挺大的，不来看看大家为什么抵制它吗？</p>
+<p>需要理顺数据结构，再抓关键流程。</p>
+<pre><code>Reading Date:
+20201211 Fri
+20201212 Sat
+20201213 Sun
+	集中的3天看，理顺了基本的框架
+</code></pre><h2 id="overview">Overview</h2>
+<pre><code># commit 5916c54a8dabd25efa0d78deef78fbfab684b8a4 
+
+  No             filename  linenum
+   1            execute.c     6514
+   2               unit.c     6367
+   3      load-fragment.c     5851
+   4            manager.c     4978
+   5            service.c     4587
+   6             cgroup.c     3778
+   7             socket.c     3517
+   8       dbus-execute.c     3459
+   9       dbus-manager.c     3317
+  10               main.c     2930
+  11          dbus-unit.c     2475
+  12          namespace.c     2384
+  13              mount.c     2204
+  14        dbus-cgroup.c     1718
+  15                job.c     1698
+  16               swap.c     1690
+  17               dbus.c     1250
+  18        transaction.c     1201
+  19          automount.c     1129
+  20             device.c     1120
+  21              timer.c     956
+</code></pre><p>拉取了src/core/下代码最多的几个文件。从这个大致能看出来复杂度集中在哪些方面，作为调度各类进程运行状态的一个程序，execute相关的复杂度最大当之无愧，控制进程执行会涉及到方方面面，这也是systemd不愿意跨系统移植的最大阻力吧。</p>
+<p>unit/service/socket/mount/device/timer/automount/swap这些东西是一类，是作为一种entry而存在，是被动、被调用、被使用的实体。</p>
+<p>manager/job/transaction/load-fratment是内阁，作为进程驱动的存在。</p>
+<p>dbus则是暴露了内部功能给其他进程使用，作为接待处，要负责请求命令的转换，所以归为一块相对独立的功能。</p>
+<h2 id="data-structure">Data Structure</h2>
+<h3 id="manager">Manager</h3>
+<p>如其名所示，<code>Manager</code>是整个systemd的核心所在。这是一个巨大的结构体。</p>
+<p>在运行时，主循环就在做一件事，dispatch各种queue。这些个queue都是附着在manager上的，比如</p>
+<ul>
+<li>
+<p>load queue</p>
+<p>加载解析unit file到内存中</p>
+</li>
+<li>
+<p>run queue</p>
+<p>job存在的地方，处理本职工作的地方</p>
+</li>
+<li>
+<p>gc job</p>
+</li>
+<li>
+<p>gc unit</p>
+</li>
+<li>
+<p>cleanup</p>
+</li>
+<li>
+<p>cgroup realize</p>
+</li>
+<li>
+<p>dbus queue</p>
+</li>
+</ul>
+<h3 id="unit">Unit</h3>
+<p>每个UnitType都有自己的<code>UnitVTable</code>注册到全局，<code>UnitVTable</code>用于操作<code>Unit</code>。这也是Manager用于控制各类unit的手段。Manager不关心具体的每个unit该怎么操作，它只需要关注自己需要那些操作行为，然后定义到vtable里，由各类unit自己去实现。</p>
+<h3 id="job">Job</h3>
+<p>需要关注Job状态在何时进行转换。</p>
+<h2 id="components">Components</h2>
+<p>Systemd开发组在开发的过程中逐渐抽象出来的组件，对于项目级别来说是很好用的。这些代码都放在<code>src/libsystemd</code>下面，头文件则在<code>src/systemd</code>。</p>
+<h3 id="sd-event">sd-event</h3>
+<p>类似于<code>GIO</code>，封装了自己的eventloop；socketfd、timer、signal都作为一个event source，可以绑定自己的处理函数上去。</p>
+<h3 id="sd-bus">sd-bus</h3>
+<p>Systemd自己的DBus实现。</p>
+<h2 id="startup-procedure-and-main-loop">Startup Procedure and main loop</h2>
+<blockquote>
+<p>大量使用了查表，是个查表狂魔项目。</p>
+</blockquote>
+<p>静心想想一个init程序要干什么，它的运行时表现是什么？</p>
+<ul>
+<li>开机的时候要启动各种程序</li>
+<li>其他程序跑出来的zombie进程要收割</li>
+<li>开机后用户也会起进服务（daemon），现在这个工作依托给了systemd来完成。</li>
+</ul>
+<p>systemd其实也是一个server程序，只不过和这个server交互的方式比较不一样，不是通过tcp，虽然它也支持，但主要还是dbus的那个unix socket，外加各种信号。而通过<code>sd-event</code>的统一，这些交互都化身为<code>sd-event-source</code>，可以被epoll监听。为什么说systemd是linux only，可能也是得益于linux上才有signalfd/eventfd/timerfd吧。</p>
+<h3 id="startup">Startup</h3>
+<p>启动是最复杂的。作为一个要兜底的进程，需要考虑到各种婆婆妈妈的情况。</p>
+<p>在代码里写死的启动项目，叫<code>SPECIAL_DEFAULT_TARGET &quot;default.target&quot;</code>。之后之所以能带动起到了的各种unit的启动，是因为有systemd的unit加载启动机制。还好项目的代码写的很明了，对于启动需要关注一个函数就行：<code>manager_startup</code>。</p>
+<ul>
+<li>找到default.target在哪里，这里的寻找过程就奠定了使用时该怎么找启动文件，很冗长也很无聊的代码</li>
+<li>systemd也支持旧式的initrc脚本，总要有个识别旧式启动方式的过程，所以接下来就是这个识别并收为己用的过程。systemd把这个过程命名为generator。</li>
+<li>接下来的过程叫做<code>enumerate_perpetual/enumerate</code>，用于一些mount的对象，可以发现当前系统里存在的设备。</li>
+<li>dbus也要在这个时候做好准备。</li>
+<li>把<code>SPECIAL_DEFAULT_TARGET</code>加入到load queue中。这个算是比较标志性的一个点了。可以说systemd真正的启动过程就是从这里来的。关键函数是<code>do_queue_default_job</code>。</li>
+<li>进入<code>sd-event</code>的循环，正式开始上班。</li>
+</ul>
+<h4 id="do_queue_default_job"><code>do_queue_default_job</code></h4>
+<p>把default.target加载到内存里，并连带依赖一起加载的工作是在<code>manager_load_startable_unit_or_warn</code>中进行的。这里比较关键的接口是<code>manager_load_unit</code>。这里分2步走</p>
+<ol>
+<li><code>manager_load_unit_prepare</code> : 找到这个目的unit，初始化，然后加入到manager的load_queue中。</li>
+<li><code>manager_dispatch_load_queue</code> : 循环加载就在这个里面实现。里面有一个while，从<code>m-&gt;load_queue</code>中不断取unit来加载。虽然刚开始只加入了一个default.target，但是加载default.target的时候会不断的把所依赖的unit插入到<code>m-&gt;load_queue</code>之中。循环往复，直到所有依赖都加载完成。</li>
+</ol>
+<p>这时这些unit终于从文件变成了内存的结构，准备工作完成。接下来启动的工作由<code>manager_add_job</code>完成。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c" data-lang="c"><span style="color:#66d9ef">int</span> <span style="color:#a6e22e">manager_add_job</span>(
+                Manager <span style="color:#f92672">*</span>m,
+                JobType type,
+                Unit <span style="color:#f92672">*</span>unit,
+                JobMode mode,
+                Set <span style="color:#f92672">*</span>affected_jobs,
+                sd_bus_error <span style="color:#f92672">*</span>error,
+                Job <span style="color:#f92672">**</span>ret)
+
+r <span style="color:#f92672">=</span> manager_add_job(m, JOB_START, target, JOB_ISOLATE, NULL, <span style="color:#f92672">&amp;</span>error, <span style="color:#f92672">&amp;</span>job);
+</code></pre></div><p>看签名的话，<code>manager_add_job</code>会返回一个job给我们，但是job却不是这个函数里分配的。函数里用了一个临时的Transaction来处理依赖，在transaction里有一个<code>anchor_job</code>，就是我们所请求的起始job。函数最终返回的就是这个<code>anchor_job</code>。</p>
+        </div>
+        
+
+
+<div class="post-info">
+    
+        <div class="post-date dt-published">2020-12-24</div>
+    
+
+    <a class="post-hidden-url u-url" href="https://ivkus.github.io/posts/osc/systemd_read/">https://ivkus.github.io/posts/osc/systemd_read/</a>
+    <a href="https://ivkus.github.io/" class="p-name p-author post-hidden-author h-card" rel="me"></a>
+
+
+    <div class="post-taxonomies">
+        
+            
+                <ul class="post-tags">
+                    
+                        
+                        <li><a href="https://ivkus.github.io/tags/linux/">#linux</a></li>
+                    
+                </ul>
+        
+    </div>
+</div>
+
+    </article>
+
+    
+
+    
+
+    
+        
+
+
+
+
+
+
+
+    
+
+        </main>
+        
+            <footer class="common-footer">
+    
+    
+
+    <div class="common-footer-bottom">
+        
+        <div class="copyright">
+            <p>© 2022<br>
+            Powered by <a target="_blank" rel="noopener noreferrer" href="https://gohugo.io/">Hugo</a>, theme <a target="_blank" rel="noopener noreferrer" href="https://github.com/mitrichius/hugo-theme-anubis">Anubis</a>.<br>
+            
+            </p>  
+        </div> 
+
+        
+
+    
+
+
+
+    <button class="theme-switcher">
+        Dark theme
+    </button>
+
+
+<script>
+const STORAGE_KEY = 'user-color-scheme'
+const defaultTheme = "auto"
+
+let currentTheme
+let switchButton
+let autoDefinedScheme = window.matchMedia('(prefers-color-scheme: dark)')
+
+const autoChangeScheme = e => {
+    currentTheme = e.matches ? 'dark' : 'light'
+    document.documentElement.setAttribute('data-theme', currentTheme)
+    changeButtonText()
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    switchButton = document.querySelector('.theme-switcher')
+    currentTheme = detectCurrentScheme()
+    if (currentTheme == 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark')
+    }
+    if (currentTheme == 'auto') {
+        autoChangeScheme(autoDefinedScheme);
+        autoDefinedScheme.addListener(autoChangeScheme);
+    }
+
+    if (switchButton) {
+        changeButtonText()
+        switchButton.addEventListener('click', switchTheme, false)
+    }
+  
+    showContent()
+})
+
+function detectCurrentScheme() {
+    if (localStorage.getItem(STORAGE_KEY)) {
+        return localStorage.getItem(STORAGE_KEY)
+    } 
+    if (defaultTheme) {
+        return defaultTheme
+    } 
+    if (!window.matchMedia) {
+        return 'light'
+    } 
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark'
+    }
+    return 'light'
+}
+
+function changeButtonText()
+{   
+    if (switchButton) {
+        switchButton.textContent = currentTheme == 'dark' ?  "Light theme" : "Dark theme"
+    }
+}
+
+function switchTheme(e) {
+    if (currentTheme == 'dark') {
+        localStorage.setItem(STORAGE_KEY, 'light')
+        document.documentElement.setAttribute('data-theme', 'light')
+        currentTheme = 'light'
+    } else {
+        localStorage.setItem(STORAGE_KEY, 'dark')
+        document.documentElement.setAttribute('data-theme', 'dark')
+        currentTheme = 'dark'
+    }
+    changeButtonText()
+}
+
+function showContent() {
+    document.body.style.visibility = 'visible';
+    document.body.style.opacity = 1;
+}
+</script>   
+    </div>
+
+    <p class="h-card vcard">
+
+    <a href=https://ivkus.github.io/ class="p-name u-url url fn" rel="me"></a> 
+
+     
+        /
+        <a class="p-email u-email email" rel="me" href="mailto:aiueclipse@mail.com">aiueclipse@mail.com</a>
+    
+
+    
+</p> 
+</footer>
+
+        
+    </div>
+</body>
+</html>

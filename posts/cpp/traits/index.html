@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+
+
+<html lang="zh-cn" data-theme="">
+<head>
+    
+        
+<meta charset="utf-8">
+<meta name="HandheldFriendly" content="True">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer-when-downgrade">
+
+<title>【翻译】Traits:一种新的而且有用的Template技巧 - 存留处</title>
+
+<meta name="description" content="
+文章来自Traits: a new and useful template technique
+应该是很老(1995)的文章了，不过很适合作为Template入门的材料。
+
+ANSI/ISO C&#43;&#43;标准库一开始就想支持国际化(internationalization)，虽然一开始还没相好具体细节，但是最近5年逐渐有点眉目了。现在得到的结论是，应当用template来对需要进行字符操作的工具进行参数化。
+给现有的iostream和string类型进行参数化其实挺难的，需要发明一种新的技术才行。幸运的是，这种技术可以很好的服用在其他地方。">
+
+
+
+
+
+<link rel="icon" type="image/x-icon" href="https://ivkus.github.io/favicon.ico">
+<link rel="apple-touch-icon-precomposed" href="https://ivkus.github.io/favicon.png">
+
+
+<style>
+  body {
+    visibility: hidden;
+    opacity: 0;
+  }
+</style>
+
+<noscript>
+  <style>
+    body {
+      visibility: visible;
+      opacity: 1;
+    }
+  </style>
+</noscript>
+
+
+
+    
+
+
+
+
+
+    
+    
+        
+    
+    
+
+    
+        <link rel="stylesheet" href="https://ivkus.github.io/css/style.min.c0f14e5462dab0ccfdd33a7517489c51f8e629cf051234533dce5e88fa29274b.css" integrity="sha256-wPFOVGLasMz90zp1F0icUfjmKc8FEjRTPc5eiPopJ0s=">
+    
+
+
+
+
+
+    
+
+    
+
+
+
+
+
+    
+    
+        
+    
+    
+
+    
+        <script src="https://ivkus.github.io/js/script.min.0ac446ff60cfd2037010e05589e719afdf147b05baf883558bf00ed7a5efb1dc.js" type="text/javascript" charset="utf-8" integrity="sha256-CsRG/2DP0gNwEOBViecZr98UewW6&#43;INVi/AO16Xvsdw="></script>
+    
+
+
+
+
+
+
+
+<meta property="og:title" content="【翻译】Traits:一种新的而且有用的Template技巧" />
+<meta property="og:description" content="
+文章来自Traits: a new and useful template technique
+应该是很老(1995)的文章了，不过很适合作为Template入门的材料。
+
+ANSI/ISO C&#43;&#43;标准库一开始就想支持国际化(internationalization)，虽然一开始还没相好具体细节，但是最近5年逐渐有点眉目了。现在得到的结论是，应当用template来对需要进行字符操作的工具进行参数化。
+给现有的iostream和string类型进行参数化其实挺难的，需要发明一种新的技术才行。幸运的是，这种技术可以很好的服用在其他地方。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ivkus.github.io/posts/cpp/traits/" />
+<meta property="article:published_time" content="2022-05-27T10:15:38+08:00" />
+<meta property="article:modified_time" content="2022-05-27T10:15:38+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="【翻译】Traits:一种新的而且有用的Template技巧"/>
+<meta name="twitter:description" content="
+文章来自Traits: a new and useful template technique
+应该是很老(1995)的文章了，不过很适合作为Template入门的材料。
+
+ANSI/ISO C&#43;&#43;标准库一开始就想支持国际化(internationalization)，虽然一开始还没相好具体细节，但是最近5年逐渐有点眉目了。现在得到的结论是，应当用template来对需要进行字符操作的工具进行参数化。
+给现有的iostream和string类型进行参数化其实挺难的，需要发明一种新的技术才行。幸运的是，这种技术可以很好的服用在其他地方。"/>
+
+
+
+
+
+
+
+
+
+
+
+    
+</head>
+<body>
+    <a class="skip-main" href="#main">Skip to main content</a>
+    <div class="container">
+        <header class="common-header"> 
+            
+                <div class="header-top">
+    <h1 class="site-title">
+    <a href="/">存留处</a>
+</h1>
+    <ul class="social-icons">
+
+
+
+
+
+</ul>
+</div>
+
+    <nav>
+        
+        
+        <a class="" href="https://ivkus.github.io/posts/" title="Archive">Archive</a>
+        
+        <a class="" href="https://ivkus.github.io/tags/" title="">Tags</a>
+        
+        <a class="" href="https://ivkus.github.io/about/" title="">About</a>
+        
+    </nav>
+
+
+
+
+            
+        </header>
+        <main id="main" tabindex="-1"> 
+            
+    
+
+    <article class="post h-entry">
+        <div class="post-header">
+            <header>
+                <h1 class="p-name post-title">【翻译】Traits:一种新的而且有用的Template技巧</h1>
+
+                
+            </header>
+        </div>
+        <div class="content e-content">
+            <blockquote>
+<p>文章来自<a href="http://www.cantrip.org/traits.html">Traits: a new and useful template technique</a></p>
+<p>应该是很老(1995)的文章了，不过很适合作为Template入门的材料。</p>
+</blockquote>
+<p>ANSI/ISO C++标准库一开始就想支持国际化(internationalization)，虽然一开始还没相好具体细节，但是最近5年逐渐有点眉目了。现在得到的结论是，应当用template来对需要进行字符操作的工具进行参数化。</p>
+<p>给现有的iostream和string类型进行参数化其实挺难的，需要发明一种新的技术才行。幸运的是，这种技术可以很好的服用在其他地方。</p>
+<h2 id="问题">问题</h2>
+<p>在iostream中，streambuf需要一个EOF来完成自身的功能。在一般的库中，EOF就是一个int而已；一些需要读取字符的函数也只返回int数值。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">streambuf</span> {
+    ...
+    <span style="color:#66d9ef">int</span> sgetc();  <span style="color:#75715e">// return the next character, or EOF.
+</span><span style="color:#75715e"></span>    <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">sgetn</span>(<span style="color:#66d9ef">char</span><span style="color:#f92672">*</span>, <span style="color:#66d9ef">int</span> N);  <span style="color:#75715e">// get N characters.
+</span><span style="color:#75715e"></span>  };
+</code></pre></div><p>但如果用一种字符类型来参数化streambuf，会发生什么？一般来说，程序并不需要这个类型，而是需要这个类型的EOF的值。先试试看：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">template</span> <span style="color:#f92672">&lt;</span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">charT</span>, <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">intT</span><span style="color:#f92672">&gt;</span>
+  <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">basic_streambuf</span> {
+    ...
+    intT sgetc();
+    <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">sgetn</span>(charT<span style="color:#f92672">*</span>, <span style="color:#66d9ef">int</span> N);
+  };
+</code></pre></div><p>这个多出来的intT就有点烦人了。库的使用方才不关心所谓的EOF是啥。问题还不只这个，sgetc在遇到EOF时应该返回什么？莫非要再来一个模板参数？看来这种方式行不通。</p>
+<h2 id="traits技法">Traits技法</h2>
+<p>这时候就需要引入<strong>Traits</strong>了。有了traits，就不需要从原来的模板里直接取参数，而是定义一个新的模板。用户一般不会直接使用这个新的模板，所以这个模板名字可以起的人性化一点。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">template</span> <span style="color:#f92672">&lt;</span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">charT</span><span style="color:#f92672">&gt;</span>
+  <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">ios_char_traits</span> { };
+</code></pre></div><p>默认的traits是个空类。对于真实的字符类型，可以特化这个模板以提供有意义的语义。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">ios_char_traits</span><span style="color:#f92672">&lt;</span><span style="color:#66d9ef">char</span><span style="color:#f92672">&gt;</span> {
+    <span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">char</span> char_type;
+    <span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">int</span>  int_type;
+    <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">inline</span> int_type <span style="color:#a6e22e">eof</span>() { <span style="color:#66d9ef">return</span> EOF; }
+  };
+</code></pre></div><p>ios_char_traits<!-- raw HTML omitted -->并没有数据成员，只有一些定义。再看看streambuf该怎么定义。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">template</span> <span style="color:#f92672">&lt;</span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">charT</span><span style="color:#f92672">&gt;</span>
+  <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">basic_streambuf</span> {
+    <span style="color:#66d9ef">public</span><span style="color:#f92672">:</span>
+      <span style="color:#66d9ef">typedef</span> ios_char_traits<span style="color:#f92672">&lt;</span>charT<span style="color:#f92672">&gt;</span> traits_type;
+      <span style="color:#66d9ef">typedef</span> traits_type<span style="color:#f92672">::</span>int_type int_type;
+      int_type <span style="color:#a6e22e">eof</span>() { <span style="color:#66d9ef">return</span> traits_type<span style="color:#f92672">::</span>eof(); }
+      ...
+      int_type sgetc();
+      <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">sgetn</span>(charT<span style="color:#f92672">*</span>, <span style="color:#66d9ef">int</span> N);
+  };
+</code></pre></div><p>除去typedef，这个和最开始的定义很像。现在就有1个模板参数，也是用户需要关心的唯一一个模板参数。编译器会从这个trait类中寻找需要的信息。除了一些变量的声明需要调整，用户的使用代码和之前看起来没有太大不同。</p>
+<p>如果streambuf用了另外一个字符类型，这时只要重新特化ios_char_traits即可。要支持wchar_t可以这么写：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">ios_char_traits</span><span style="color:#f92672">&lt;</span><span style="color:#66d9ef">wchar_t</span><span style="color:#f92672">&gt;</span> {
+    <span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">wchar_t</span> char_type;
+    <span style="color:#66d9ef">typedef</span> wint_t  int_type;
+    <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">inline</span> int_type <span style="color:#a6e22e">eof</span>() { <span style="color:#66d9ef">return</span> WEOF; }
+  };
+</code></pre></div><p>string类可以用同样的方式参数化。</p>
+<p>这个技巧的适用场景：1. 对原始类型进行模板参数化；2.对没办法改动的类进行定制</p>
+<h2 id="另一个例子">另一个例子</h2>
+<p>更进一步解释之前，再看看另一个例子（来自ANSI/ISO C++ [Draft] Standard）。</p>
+<p>有一个数值计算库使用的类型有float, double和long double，每个类型都有关联的&quot;epsilon&rdquo;、指数和底数。这些数值在&lt;float.h&gt;里都有定义，但库中有一些工具不知道改用FLT_MAX_EXP还是DBL_MAX_EXP。用traits技术可以很干净的解决这个问题。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">template</span> <span style="color:#f92672">&lt;</span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">numT</span><span style="color:#f92672">&gt;</span>
+  <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">float_traits</span> { };
+
+  <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">float_traits</span><span style="color:#f92672">&lt;</span><span style="color:#66d9ef">float</span><span style="color:#f92672">&gt;</span> {
+    <span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">float</span> float_type;
+    <span style="color:#66d9ef">enum</span> { max_exponent <span style="color:#f92672">=</span> FLT_MAX_EXP };
+    <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">inline</span> float_type <span style="color:#a6e22e">epsilon</span>() { <span style="color:#66d9ef">return</span> FLT_EPSILON; }
+    ...
+  };
+
+  <span style="color:#66d9ef">struct</span> <span style="color:#a6e22e">float_traits</span><span style="color:#f92672">&lt;</span><span style="color:#66d9ef">double</span><span style="color:#f92672">&gt;</span> {
+    <span style="color:#66d9ef">typedef</span> <span style="color:#66d9ef">double</span> float_type;
+    <span style="color:#66d9ef">enum</span> { max_exponent <span style="color:#f92672">=</span> DBL_MAX_EXP };
+    <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">inline</span> float_type <span style="color:#a6e22e">epsilon</span>() { <span style="color:#66d9ef">return</span> DBL_EPSILON; }
+    ...
+  };
+</code></pre></div><p>现在可以在不知道具体类型(float/double/long double)直接取到max_exponent。举个matrix的例子</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">template</span> <span style="color:#f92672">&lt;</span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">numT</span><span style="color:#f92672">&gt;</span>
+  <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">matrix</span> {
+    <span style="color:#66d9ef">public</span><span style="color:#f92672">:</span>
+      <span style="color:#66d9ef">typedef</span> numT num_type;
+      <span style="color:#66d9ef">typedef</span> float_traits<span style="color:#f92672">&lt;</span>num_type<span style="color:#f92672">&gt;</span> traits_type;
+      <span style="color:#66d9ef">inline</span> num_type <span style="color:#a6e22e">epsilon</span>() { <span style="color:#66d9ef">return</span> traits_type<span style="color:#f92672">::</span>epsilon(); }
+      ...
+  };
+</code></pre></div><p>到现在为止的例子里，每个模板参数都有一系列public的typedef，而使用这些参数的类都强依赖于这些typedef。这绝非偶然：大多数的情况下，作为参数的traits必须提供public的typedef，使用这些traits的template才能正确的实例化。</p>
+<p>学到一点：一定要提供这些public的typedef。</p>
+<h2 id="默认模板参数">默认模板参数</h2>
+<p>到1993年为止，编译器就可以支持上述的用法。1993年11月后，一个更好的方案呼之欲出：可以制定默认的模板参数。当下已经有不少编译器支持数值作为默认模板参数了，新方案更进一步，允许类型作为默认模板参数。</p>
+<p>Stroustrup&rsquo;s Design and Evolution of C++ (page 359)有一个示例。首先定义一个traits: CMP，和一个简单的参数化的string。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">template</span> <span style="color:#f92672">&lt;</span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">T</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">CMP</span> {
+    <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">bool</span> <span style="color:#a6e22e">eq</span>(T a, T b) { <span style="color:#66d9ef">return</span> a <span style="color:#f92672">==</span> b; }
+    <span style="color:#66d9ef">static</span> <span style="color:#66d9ef">bool</span> <span style="color:#a6e22e">lt</span>(T a, T b) { <span style="color:#66d9ef">return</span> a <span style="color:#f92672">&lt;</span> b; }
+  };
+  <span style="color:#66d9ef">template</span> <span style="color:#f92672">&lt;</span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">charT</span><span style="color:#f92672">&gt;</span> <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">basic_string</span>;
+</code></pre></div><p>这时就可以为string自定义compare操作了：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">template</span> <span style="color:#f92672">&lt;</span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">charT</span>, <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">C</span> <span style="color:#f92672">=</span> CMP<span style="color:#f92672">&lt;</span>charT<span style="color:#f92672">&gt;</span> <span style="color:#f92672">&gt;</span>
+  <span style="color:#66d9ef">int</span> compare(<span style="color:#66d9ef">const</span> basic_string<span style="color:#f92672">&lt;</span>charT<span style="color:#f92672">&gt;&amp;</span>,
+              <span style="color:#66d9ef">const</span> basic_string<span style="color:#f92672">&lt;</span>charT<span style="color:#f92672">&gt;&amp;</span>);
+</code></pre></div><p>这里不讨论具体实现细节，但需要关注第二个模板参数。首先，这个C不仅仅是class，而且是实例化后的class。其次，第二个模板参数(C)自己也需要参数，而需要的参数是compare的第一个模板参数(charT)。这在函数声明中是不可以的，但在模板声明时可行。</p>
+<p>这种方式允许用户可以自定义比较的过程。把这个技术应用在我们自己的streambuf模板上看下：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">template</span> <span style="color:#f92672">&lt;</span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">charT</span>, <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">traits</span> <span style="color:#f92672">=</span> ios_char_traits<span style="color:#f92672">&lt;</span>charT<span style="color:#f92672">&gt;</span> <span style="color:#f92672">&gt;</span>
+  <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">basic_streambuf</span> {
+    <span style="color:#66d9ef">public</span><span style="color:#f92672">:</span>
+      <span style="color:#66d9ef">typedef</span> traits traits_type;
+      <span style="color:#66d9ef">typedef</span> traits_type<span style="color:#f92672">::</span>int_type int_type;
+      int_type <span style="color:#a6e22e">eof</span>() { <span style="color:#66d9ef">return</span> traits_type<span style="color:#f92672">::</span>eof(); }
+      ...
+      int_type sgetc();
+      <span style="color:#66d9ef">int</span> <span style="color:#a6e22e">sgetn</span>(charT<span style="color:#f92672">*</span>, <span style="color:#66d9ef">int</span> N);
+  };
+</code></pre></div><p>这给了我们为特定char定制traits的机会。这对库的用户来说很重要，因为EOF在不同的字符集映射中是有可能不一样的。</p>
+<h2 id="运行时的traits">运行时的Traits</h2>
+<p>更进一步，看戏streambuf的构造函数：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++">  <span style="color:#66d9ef">template</span> <span style="color:#f92672">&lt;</span><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">charT</span>, <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">traits</span> <span style="color:#f92672">=</span> ios_char_traits<span style="color:#f92672">&lt;</span>charT<span style="color:#f92672">&gt;</span> <span style="color:#f92672">&gt;</span>
+  <span style="color:#66d9ef">class</span> <span style="color:#a6e22e">basic_streambuf</span> {
+      traits traits_;  <span style="color:#75715e">// member data
+</span><span style="color:#75715e"></span>      ...
+    <span style="color:#66d9ef">public</span><span style="color:#f92672">:</span>
+      basic_streambuf(<span style="color:#66d9ef">const</span> traits<span style="color:#f92672">&amp;</span> b <span style="color:#f92672">=</span> traits())
+        <span style="color:#f92672">:</span> traits_(b) { ... }
+
+      int_type <span style="color:#a6e22e">eof</span>() { <span style="color:#66d9ef">return</span> traits_.eof(); }
+  };
+</code></pre></div><p>现在我们traits也可以在运行时发挥作用了，而不仅仅是编译时。在这个例子中，traits_.eof()可能是一个静态函数，或者是一个普通的成员函数。如果是普通成员函数，eof()可能会用到构造traits时的一些参数。（这个技巧是有实际使用场景的，比如标准库里的容器都有的allocator）</p>
+<p>值得注意的是，对使用方来说，现在没有任何的改变，默认参数可以满足大部分的使用需求。但是当有自己特殊需求时，现在的模板定义也能提供修改的机会。不论什么情况下，我们都会生成最优的代码，如果不需要额外的代价，我们就不会引入这些额外的代价！</p>
+<h2 id="总结">总结</h2>
+<p>只要编译器支持template，traits技巧就可以直接上手用起来了。</p>
+<p>Traits可以将相关联的类型、值、函数等用模板参数关联起来，同时不引入过多的噪声。这项语言特性（默认模板参数）极大的扩充了语言能力，提供了足够的灵活性，也丝毫不损害运行效率。</p>
+<h2 id="参考">参考</h2>
+<ul>
+<li>Stroustrup, B. Design and Evolution of C++, Addison-Wesley, Reading, MA, 1993.</li>
+<li>Barton, J.J., and L.R. Nackman, Scientific and Engineering C++, Addison-Wesley, Reading, MA, 1994.</li>
+<li>Veldhuizen, T. &quot; Expression Templates&rdquo;, C++ Report, June 1995, SIGS Publications, New York.</li>
+</ul>
+        </div>
+        
+
+
+<div class="post-info">
+    
+        <div class="post-date dt-published">2022-05-27</div>
+    
+
+    <a class="post-hidden-url u-url" href="https://ivkus.github.io/posts/cpp/traits/">https://ivkus.github.io/posts/cpp/traits/</a>
+    <a href="https://ivkus.github.io/" class="p-name p-author post-hidden-author h-card" rel="me"></a>
+
+
+    <div class="post-taxonomies">
+        
+            
+    </div>
+</div>
+
+    </article>
+
+    
+
+    
+
+    
+        
+
+
+
+
+
+
+
+    
+
+        </main>
+        
+            <footer class="common-footer">
+    
+    
+
+    <div class="common-footer-bottom">
+        
+        <div class="copyright">
+            <p>© 2022<br>
+            Powered by <a target="_blank" rel="noopener noreferrer" href="https://gohugo.io/">Hugo</a>, theme <a target="_blank" rel="noopener noreferrer" href="https://github.com/mitrichius/hugo-theme-anubis">Anubis</a>.<br>
+            
+            </p>  
+        </div> 
+
+        
+
+    
+
+
+
+    <button class="theme-switcher">
+        Dark theme
+    </button>
+
+
+<script>
+const STORAGE_KEY = 'user-color-scheme'
+const defaultTheme = "auto"
+
+let currentTheme
+let switchButton
+let autoDefinedScheme = window.matchMedia('(prefers-color-scheme: dark)')
+
+const autoChangeScheme = e => {
+    currentTheme = e.matches ? 'dark' : 'light'
+    document.documentElement.setAttribute('data-theme', currentTheme)
+    changeButtonText()
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    switchButton = document.querySelector('.theme-switcher')
+    currentTheme = detectCurrentScheme()
+    if (currentTheme == 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark')
+    }
+    if (currentTheme == 'auto') {
+        autoChangeScheme(autoDefinedScheme);
+        autoDefinedScheme.addListener(autoChangeScheme);
+    }
+
+    if (switchButton) {
+        changeButtonText()
+        switchButton.addEventListener('click', switchTheme, false)
+    }
+  
+    showContent()
+})
+
+function detectCurrentScheme() {
+    if (localStorage.getItem(STORAGE_KEY)) {
+        return localStorage.getItem(STORAGE_KEY)
+    } 
+    if (defaultTheme) {
+        return defaultTheme
+    } 
+    if (!window.matchMedia) {
+        return 'light'
+    } 
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark'
+    }
+    return 'light'
+}
+
+function changeButtonText()
+{   
+    if (switchButton) {
+        switchButton.textContent = currentTheme == 'dark' ?  "Light theme" : "Dark theme"
+    }
+}
+
+function switchTheme(e) {
+    if (currentTheme == 'dark') {
+        localStorage.setItem(STORAGE_KEY, 'light')
+        document.documentElement.setAttribute('data-theme', 'light')
+        currentTheme = 'light'
+    } else {
+        localStorage.setItem(STORAGE_KEY, 'dark')
+        document.documentElement.setAttribute('data-theme', 'dark')
+        currentTheme = 'dark'
+    }
+    changeButtonText()
+}
+
+function showContent() {
+    document.body.style.visibility = 'visible';
+    document.body.style.opacity = 1;
+}
+</script>   
+    </div>
+
+    <p class="h-card vcard">
+
+    <a href=https://ivkus.github.io/ class="p-name u-url url fn" rel="me"></a> 
+
+     
+        /
+        <a class="p-email u-email email" rel="me" href="mailto:aiueclipse@mail.com">aiueclipse@mail.com</a>
+    
+
+    
+</p> 
+</footer>
+
+        
+    </div>
+</body>
+</html>

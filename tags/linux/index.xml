@@ -13,10 +13,10 @@
     
     <item>
       <title>Systemd阅读笔记</title>
-      <link>https://ivkus.github.io/posts/systemd_read/</link>
+      <link>https://ivkus.github.io/posts/osc/systemd_read/</link>
       <pubDate>Thu, 24 Dec 2020 21:54:51 +0800</pubDate>
       
-      <guid>https://ivkus.github.io/posts/systemd_read/</guid>
+      <guid>https://ivkus.github.io/posts/osc/systemd_read/</guid>
       <description>&lt;p&gt;Systemd的争议挺大的，不来看看大家为什么抵制它吗？&lt;/p&gt;
 &lt;p&gt;需要理顺数据结构，再抓关键流程。&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;Reading Date:

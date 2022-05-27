@@ -12,11 +12,148 @@
     
     
     <item>
+      <title>【翻译】Traits:一种新的而且有用的Template技巧</title>
+      <link>https://ivkus.github.io/posts/cpp/traits/</link>
+      <pubDate>Fri, 27 May 2022 10:15:38 +0800</pubDate>
+      
+      <guid>https://ivkus.github.io/posts/cpp/traits/</guid>
+      <description>&lt;blockquote&gt;
+&lt;p&gt;文章来自&lt;a href=&#34;http://www.cantrip.org/traits.html&#34;&gt;Traits: a new and useful template technique&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;应该是很老(1995)的文章了，不过很适合作为Template入门的材料。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;ANSI/ISO C++标准库一开始就想支持国际化(internationalization)，虽然一开始还没相好具体细节，但是最近5年逐渐有点眉目了。现在得到的结论是，应当用template来对需要进行字符操作的工具进行参数化。&lt;/p&gt;
+&lt;p&gt;给现有的iostream和string类型进行参数化其实挺难的，需要发明一种新的技术才行。幸运的是，这种技术可以很好的服用在其他地方。&lt;/p&gt;
+&lt;h2 id=&#34;问题&#34;&gt;问题&lt;/h2&gt;
+&lt;p&gt;在iostream中，streambuf需要一个EOF来完成自身的功能。在一般的库中，EOF就是一个int而已；一些需要读取字符的函数也只返回int数值。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;streambuf&lt;/span&gt; {
+    ...
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; sgetc();  &lt;span style=&#34;color:#75715e&#34;&gt;// return the next character, or EOF.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;    &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sgetn&lt;/span&gt;(&lt;span style=&#34;color:#66d9ef&#34;&gt;char&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; N);  &lt;span style=&#34;color:#75715e&#34;&gt;// get N characters.
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;  };
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;但如果用一种字符类型来参数化streambuf，会发生什么？一般来说，程序并不需要这个类型，而是需要这个类型的EOF的值。先试试看：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;charT&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;intT&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;basic_streambuf&lt;/span&gt; {
+    ...
+    intT sgetc();
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sgetn&lt;/span&gt;(charT&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; N);
+  };
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这个多出来的intT就有点烦人了。库的使用方才不关心所谓的EOF是啥。问题还不只这个，sgetc在遇到EOF时应该返回什么？莫非要再来一个模板参数？看来这种方式行不通。&lt;/p&gt;
+&lt;h2 id=&#34;traits技法&#34;&gt;Traits技法&lt;/h2&gt;
+&lt;p&gt;这时候就需要引入&lt;strong&gt;Traits&lt;/strong&gt;了。有了traits，就不需要从原来的模板里直接取参数，而是定义一个新的模板。用户一般不会直接使用这个新的模板，所以这个模板名字可以起的人性化一点。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;charT&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ios_char_traits&lt;/span&gt; { };
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;默认的traits是个空类。对于真实的字符类型，可以特化这个模板以提供有意义的语义。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ios_char_traits&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;char&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; {
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;typedef&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;char&lt;/span&gt; char_type;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;typedef&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt;  int_type;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;inline&lt;/span&gt; int_type &lt;span style=&#34;color:#a6e22e&#34;&gt;eof&lt;/span&gt;() { &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; EOF; }
+  };
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;ios_char_traits&lt;!-- raw HTML omitted --&gt;并没有数据成员，只有一些定义。再看看streambuf该怎么定义。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;charT&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;basic_streambuf&lt;/span&gt; {
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;typedef&lt;/span&gt; ios_char_traits&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;charT&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; traits_type;
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;typedef&lt;/span&gt; traits_type&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;int_type int_type;
+      int_type &lt;span style=&#34;color:#a6e22e&#34;&gt;eof&lt;/span&gt;() { &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; traits_type&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;eof(); }
+      ...
+      int_type sgetc();
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sgetn&lt;/span&gt;(charT&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; N);
+  };
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;除去typedef，这个和最开始的定义很像。现在就有1个模板参数，也是用户需要关心的唯一一个模板参数。编译器会从这个trait类中寻找需要的信息。除了一些变量的声明需要调整，用户的使用代码和之前看起来没有太大不同。&lt;/p&gt;
+&lt;p&gt;如果streambuf用了另外一个字符类型，这时只要重新特化ios_char_traits即可。要支持wchar_t可以这么写：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;ios_char_traits&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;wchar_t&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; {
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;typedef&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;wchar_t&lt;/span&gt; char_type;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;typedef&lt;/span&gt; wint_t  int_type;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;inline&lt;/span&gt; int_type &lt;span style=&#34;color:#a6e22e&#34;&gt;eof&lt;/span&gt;() { &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; WEOF; }
+  };
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;string类可以用同样的方式参数化。&lt;/p&gt;
+&lt;p&gt;这个技巧的适用场景：1. 对原始类型进行模板参数化；2.对没办法改动的类进行定制&lt;/p&gt;
+&lt;h2 id=&#34;另一个例子&#34;&gt;另一个例子&lt;/h2&gt;
+&lt;p&gt;更进一步解释之前，再看看另一个例子（来自ANSI/ISO C++ [Draft] Standard）。&lt;/p&gt;
+&lt;p&gt;有一个数值计算库使用的类型有float, double和long double，每个类型都有关联的&amp;quot;epsilon&amp;rdquo;、指数和底数。这些数值在&amp;lt;float.h&amp;gt;里都有定义，但库中有一些工具不知道改用FLT_MAX_EXP还是DBL_MAX_EXP。用traits技术可以很干净的解决这个问题。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;numT&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;float_traits&lt;/span&gt; { };
+
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;float_traits&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;float&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; {
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;typedef&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;float&lt;/span&gt; float_type;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;enum&lt;/span&gt; { max_exponent &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; FLT_MAX_EXP };
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;inline&lt;/span&gt; float_type &lt;span style=&#34;color:#a6e22e&#34;&gt;epsilon&lt;/span&gt;() { &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; FLT_EPSILON; }
+    ...
+  };
+
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;float_traits&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;double&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; {
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;typedef&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;double&lt;/span&gt; float_type;
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;enum&lt;/span&gt; { max_exponent &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; DBL_MAX_EXP };
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;inline&lt;/span&gt; float_type &lt;span style=&#34;color:#a6e22e&#34;&gt;epsilon&lt;/span&gt;() { &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; DBL_EPSILON; }
+    ...
+  };
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;现在可以在不知道具体类型(float/double/long double)直接取到max_exponent。举个matrix的例子&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;numT&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;matrix&lt;/span&gt; {
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;typedef&lt;/span&gt; numT num_type;
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;typedef&lt;/span&gt; float_traits&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;num_type&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; traits_type;
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;inline&lt;/span&gt; num_type &lt;span style=&#34;color:#a6e22e&#34;&gt;epsilon&lt;/span&gt;() { &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; traits_type&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;epsilon(); }
+      ...
+  };
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;到现在为止的例子里，每个模板参数都有一系列public的typedef，而使用这些参数的类都强依赖于这些typedef。这绝非偶然：大多数的情况下，作为参数的traits必须提供public的typedef，使用这些traits的template才能正确的实例化。&lt;/p&gt;
+&lt;p&gt;学到一点：一定要提供这些public的typedef。&lt;/p&gt;
+&lt;h2 id=&#34;默认模板参数&#34;&gt;默认模板参数&lt;/h2&gt;
+&lt;p&gt;到1993年为止，编译器就可以支持上述的用法。1993年11月后，一个更好的方案呼之欲出：可以制定默认的模板参数。当下已经有不少编译器支持数值作为默认模板参数了，新方案更进一步，允许类型作为默认模板参数。&lt;/p&gt;
+&lt;p&gt;Stroustrup&amp;rsquo;s Design and Evolution of C++ (page 359)有一个示例。首先定义一个traits: CMP，和一个简单的参数化的string。&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;T&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;CMP&lt;/span&gt; {
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;bool&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;eq&lt;/span&gt;(T a, T b) { &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; a &lt;span style=&#34;color:#f92672&#34;&gt;==&lt;/span&gt; b; }
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;static&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;bool&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;lt&lt;/span&gt;(T a, T b) { &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; a &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt; b; }
+  };
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;charT&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;basic_string&lt;/span&gt;;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这时就可以为string自定义compare操作了：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;charT&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;C&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; CMP&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;charT&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; compare(&lt;span style=&#34;color:#66d9ef&#34;&gt;const&lt;/span&gt; basic_string&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;charT&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&amp;amp;&lt;/span&gt;,
+              &lt;span style=&#34;color:#66d9ef&#34;&gt;const&lt;/span&gt; basic_string&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;charT&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&amp;amp;&lt;/span&gt;);
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这里不讨论具体实现细节，但需要关注第二个模板参数。首先，这个C不仅仅是class，而且是实例化后的class。其次，第二个模板参数(C)自己也需要参数，而需要的参数是compare的第一个模板参数(charT)。这在函数声明中是不可以的，但在模板声明时可行。&lt;/p&gt;
+&lt;p&gt;这种方式允许用户可以自定义比较的过程。把这个技术应用在我们自己的streambuf模板上看下：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;charT&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;traits&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; ios_char_traits&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;charT&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;basic_streambuf&lt;/span&gt; {
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;typedef&lt;/span&gt; traits traits_type;
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;typedef&lt;/span&gt; traits_type&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;int_type int_type;
+      int_type &lt;span style=&#34;color:#a6e22e&#34;&gt;eof&lt;/span&gt;() { &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; traits_type&lt;span style=&#34;color:#f92672&#34;&gt;::&lt;/span&gt;eof(); }
+      ...
+      int_type sgetc();
+      &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;sgetn&lt;/span&gt;(charT&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; N);
+  };
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这给了我们为特定char定制traits的机会。这对库的用户来说很重要，因为EOF在不同的字符集映射中是有可能不一样的。&lt;/p&gt;
+&lt;h2 id=&#34;运行时的traits&#34;&gt;运行时的Traits&lt;/h2&gt;
+&lt;p&gt;更进一步，看戏streambuf的构造函数：&lt;/p&gt;
+&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;charT&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;traits&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; ios_char_traits&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;charT&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
+  &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;basic_streambuf&lt;/span&gt; {
+      traits traits_;  &lt;span style=&#34;color:#75715e&#34;&gt;// member data
+&lt;/span&gt;&lt;span style=&#34;color:#75715e&#34;&gt;&lt;/span&gt;      ...
+    &lt;span style=&#34;color:#66d9ef&#34;&gt;public&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt;
+      basic_streambuf(&lt;span style=&#34;color:#66d9ef&#34;&gt;const&lt;/span&gt; traits&lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt; b &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; traits())
+        &lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; traits_(b) { ... }
+
+      int_type &lt;span style=&#34;color:#a6e22e&#34;&gt;eof&lt;/span&gt;() { &lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; traits_.eof(); }
+  };
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;现在我们traits也可以在运行时发挥作用了，而不仅仅是编译时。在这个例子中，traits_.eof()可能是一个静态函数，或者是一个普通的成员函数。如果是普通成员函数，eof()可能会用到构造traits时的一些参数。（这个技巧是有实际使用场景的，比如标准库里的容器都有的allocator）&lt;/p&gt;
+&lt;p&gt;值得注意的是，对使用方来说，现在没有任何的改变，默认参数可以满足大部分的使用需求。但是当有自己特殊需求时，现在的模板定义也能提供修改的机会。不论什么情况下，我们都会生成最优的代码，如果不需要额外的代价，我们就不会引入这些额外的代价！&lt;/p&gt;
+&lt;h2 id=&#34;总结&#34;&gt;总结&lt;/h2&gt;
+&lt;p&gt;只要编译器支持template，traits技巧就可以直接上手用起来了。&lt;/p&gt;
+&lt;p&gt;Traits可以将相关联的类型、值、函数等用模板参数关联起来，同时不引入过多的噪声。这项语言特性（默认模板参数）极大的扩充了语言能力，提供了足够的灵活性，也丝毫不损害运行效率。&lt;/p&gt;
+&lt;h2 id=&#34;参考&#34;&gt;参考&lt;/h2&gt;
+&lt;ul&gt;
+&lt;li&gt;Stroustrup, B. Design and Evolution of C++, Addison-Wesley, Reading, MA, 1993.&lt;/li&gt;
+&lt;li&gt;Barton, J.J., and L.R. Nackman, Scientific and Engineering C++, Addison-Wesley, Reading, MA, 1994.&lt;/li&gt;
+&lt;li&gt;Veldhuizen, T. &amp;quot; Expression Templates&amp;rdquo;, C++ Report, June 1995, SIGS Publications, New York.&lt;/li&gt;
+&lt;/ul&gt;</description>
+    </item>
+    
+    <item>
       <title>【翻译】c&#43;&#43;类中“空成员”的优化</title>
-      <link>https://ivkus.github.io/posts/cpp_emptyclass_opt/</link>
+      <link>https://ivkus.github.io/posts/cpp/cpp_emptyclass_opt/</link>
       <pubDate>Thu, 26 May 2022 18:36:33 +0800</pubDate>
       
-      <guid>https://ivkus.github.io/posts/cpp_emptyclass_opt/</guid>
+      <guid>https://ivkus.github.io/posts/cpp/cpp_emptyclass_opt/</guid>
       <description>&lt;p&gt;本文来自于&lt;a href=&#34;http://www.cantrip.org/emptyopt.html&#34;&gt;The &amp;ldquo;Empty Member&amp;rdquo; C++ Optimization&lt;/a&gt;。是我在看c++ std::string代码时遇到的一个链接，其中解释了为什么_Alloc_hider会采用inhert from Alloc的原因。&lt;/p&gt;
 &lt;p&gt;文章应该是97年的，所以里面的指针长度还是4 byte。&lt;/p&gt;
 &lt;h1 id=&#34;c类中空成员的优化&#34;&gt;c++类中“空成员”的优化&lt;/h1&gt;
@@ -61,13 +198,13 @@
     &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Bar&lt;/span&gt; b;
   };
   Foo f;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;那么&lt;code&gt;f.b&lt;/code&gt;和&lt;code&gt;f.a[]&lt;/code&gt;分别是什么？如果&lt;code&gt;sizeof(Bar)&lt;/code&gt;是0，那么这2个地址就是一样的。如果你用地址来作为对象的标识，那么&lt;code&gt;f.b&lt;/code&gt;和&lt;code&gt;f.a[0]&lt;/code&gt;就是同一个对象了。C++标准委员会通过禁止空类的对象大小为0来解决这个问题。&lt;/p&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;那么&lt;code&gt;f.b&lt;/code&gt;和&lt;code&gt;f.a[]&lt;/code&gt;分别是什么？如果&lt;code&gt;sizeof(Bar)&lt;/code&gt;是0，那么这2个地址就是一样的。如果你用地址来作为对象的标识，那么&lt;code&gt;f.b&lt;/code&gt;和&lt;code&gt;f.a[0]&lt;/code&gt;就是同一个对象。C++标准委员会通过禁止空类的对象大小为0来解决这个问题。&lt;/p&gt;
 &lt;p&gt;但为什么还需要占据4 byte的大小呢？虽然大部分的编译器认为&lt;code&gt;sizeof(Bar) == 1&lt;/code&gt;，但4 byte是对象对齐的需求。比如：&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Baz&lt;/span&gt; {
     Bar b;
     &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; p;
   };
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;结构体&lt;code&gt;Baz&lt;/code&gt;在大多数的体系结构上大小是8 byte，编译器自己在Baz::b后面添加了补齐，是为了让Baz::p不会横跨一个字(word)。&lt;/p&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;结构体&lt;code&gt;Baz&lt;/code&gt;在大多数的体系结构上大小是8 byte，编译器自己在Baz::b后面添加补齐，是为了让Baz::p不会横跨一个字(word)。&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;  struct Baz
   +-----------------------------------+
   | +-------+-------+-------+-------+ |
@@ -95,7 +232,7 @@
   +-----------------------------------+
 &lt;/code&gt;&lt;/pre&gt;&lt;p&gt;编译器并未要求实现成这个样子，但是你可以认为大部分标准的编译器就是这样实现的。&lt;/p&gt;
 &lt;h2 id=&#34;消除膨胀&#34;&gt;消除膨胀&lt;/h2&gt;
-&lt;p&gt;现在你知道了消除这个开销的原理了，问题是接下来怎么做？最直观的，list&amp;lt;&amp;gt;直接继承Allocator，如下：&lt;/p&gt;
+&lt;p&gt;现在你知道了消除这个开销的原理，问题是接下来怎么做？最直观的，list&amp;lt;&amp;gt;直接继承Allocator，如下：&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;T&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Alloc&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; allocator&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;T&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
     &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;private&lt;/span&gt; Alloc {
       . . .
@@ -127,7 +264,7 @@
     };
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;采用这种方法实现的话，申请内存就用&lt;code&gt;head.allocate()&lt;/code&gt;。没有额外的开销，list&amp;lt;&amp;gt;用起来也和以前一样。不过就像其他做的好的优化一样，实现上总是有点丑陋，但总归不会影响到接口了。&lt;/p&gt;
 &lt;h2 id=&#34;统一一点的解决方案&#34;&gt;统一一点的解决方案&lt;/h2&gt;
-&lt;p&gt;当然还有提升的空间了。看看下面这个template&lt;/p&gt;
+&lt;p&gt;当然还有提升的空间。看看下面这个template&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Base&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Member&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
     &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;BaseOpt&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; Base {
       Member m;
@@ -146,7 +283,7 @@
         &lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; head_(a,&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;) { . . . }
       . . .
     };
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这个实现相比与最开始的版本，看起来也没那么不堪了。其他的STL容器，也可以借助BaseOpt来简化代码。只不过，成员函数申请内存的时候就会奇怪一些了，这个我们现在还暂时不考虑了。&lt;/p&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这个实现相比与最开始的版本，看起来也没那么不堪。其他的STL容器，也可以借助BaseOpt来简化代码。只不过，成员函数申请内存的时候就会奇怪一些，这个我们现在还暂时不考虑。&lt;/p&gt;
 &lt;p&gt;现在可以在BaseOpt定义的地方加上很好的文档来描述这个优化技术了。&lt;/p&gt;
 &lt;p&gt;也可以在BaseOpt里添加一些成员，但是并不建议这样做。这可能会造成和Base里名称冲突（就像我们在第一次尝试消除膨胀的代码里一样）。&lt;/p&gt;
 &lt;h2 id=&#34;收尾&#34;&gt;收尾&lt;/h2&gt;
@@ -155,10 +292,10 @@
     
     <item>
       <title>Systemd阅读笔记</title>
-      <link>https://ivkus.github.io/posts/systemd_read/</link>
+      <link>https://ivkus.github.io/posts/osc/systemd_read/</link>
       <pubDate>Thu, 24 Dec 2020 21:54:51 +0800</pubDate>
       
-      <guid>https://ivkus.github.io/posts/systemd_read/</guid>
+      <guid>https://ivkus.github.io/posts/osc/systemd_read/</guid>
       <description>&lt;p&gt;Systemd的争议挺大的，不来看看大家为什么抵制它吗？&lt;/p&gt;
 &lt;p&gt;需要理顺数据结构，再抓关键流程。&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;Reading Date:
@@ -283,15 +420,18 @@ r &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; manager_add_job(m, JO
       
       <guid>https://ivkus.github.io/about/</guid>
       <description>&lt;p&gt;思绪随风飘扬。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;contract me &lt;a href=&#34;mailto:aiueclipse@mail.com&#34;&gt;aiueclipse@mail.com&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
 </description>
     </item>
     
     <item>
       <title>多线程交互的思考</title>
-      <link>https://ivkus.github.io/posts/thinking_in_multithread/</link>
+      <link>https://ivkus.github.io/posts/myth/thinking_in_multithread/</link>
       <pubDate>Sat, 21 Mar 2020 21:41:48 +0800</pubDate>
       
-      <guid>https://ivkus.github.io/posts/thinking_in_multithread/</guid>
+      <guid>https://ivkus.github.io/posts/myth/thinking_in_multithread/</guid>
       <description>&lt;p&gt;最近开始写多线程的程序，整理一下对多线程代码的思考。&lt;/p&gt;
 &lt;h1 id=&#34;用多线程的时机&#34;&gt;用多线程的时机&lt;/h1&gt;
 &lt;p&gt;多线程为任务划分提供了天然的要求。如果能抽象出来流水线的业务模型，便有了多线程的用武之地。&lt;/p&gt;
@@ -318,10 +458,10 @@ r &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; manager_add_job(m, JO
     
     <item>
       <title>Waf - a Python based build system</title>
-      <link>https://ivkus.github.io/posts/waf/</link>
+      <link>https://ivkus.github.io/posts/osc/waf/</link>
       <pubDate>Fri, 26 Jul 2019 23:26:57 +0800</pubDate>
       
-      <guid>https://ivkus.github.io/posts/waf/</guid>
+      <guid>https://ivkus.github.io/posts/osc/waf/</guid>
       <description>&lt;p&gt;看懂这篇文章需要一点使用waf的经验，不过也不费事，看看例子也够了。&lt;/p&gt;
 &lt;h1 id=&#34;构建系统简谈&#34;&gt;构建系统简谈&lt;/h1&gt;
 &lt;p&gt;软件构建系统不像是个很多人在研究的东西，所以在网络上很少能找到剖析某个构建系统原理、或者阐述构建系统principle的文章。看ns3的过程中接触到了waf，发现其文档&lt;a href=&#34;https://waf.io/book/&#34;&gt;waf book&lt;/a&gt;很好的阐述了构建系统的一些基础知识，个人认为比cmake的文档好一些。因为其核心只有十几个文件，这个构建系统只需要一个10k+的waf文件，所以可以放到版本库里（像对python的评价一样，batteries included），唯一要求就是环境中有python，而这对一个开发人员来说显然不是一件困难的事情。&lt;/p&gt;
@@ -469,10 +609,10 @@ $ g++ main.o -o app -lmylib
     
     <item>
       <title>TypeId in NS3</title>
-      <link>https://ivkus.github.io/posts/ns3_typeid/</link>
+      <link>https://ivkus.github.io/posts/osc/ns3_typeid/</link>
       <pubDate>Sun, 29 Jul 2018 23:23:55 +0800</pubDate>
       
-      <guid>https://ivkus.github.io/posts/ns3_typeid/</guid>
+      <guid>https://ivkus.github.io/posts/osc/ns3_typeid/</guid>
       <description>&lt;p&gt;NS3作为一个网络仿真库，出于性能的考量选择了C++。在写仿真程序时，不可避免的要对各种实体进行建模，自然C++中的class成了唯一可选的方案。不加任何技巧的class的确可以满足对某些实体的建模，可是在仿真软件的编写中需要有足够的动态性，比如有这样一些需求：&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;动态的获知某个实体所具有的各类属性与属性的值&lt;/li&gt;

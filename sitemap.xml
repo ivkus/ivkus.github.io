@@ -3,12 +3,17 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
-    <loc>https://ivkus.github.io/tags/cpp/</loc>
-    <lastmod>2022-05-26T18:36:33+08:00</lastmod>
+    <loc>https://ivkus.github.io/posts/</loc>
+    <lastmod>2022-05-27T10:15:38+08:00</lastmod>
   </url>
   
   <url>
-    <loc>https://ivkus.github.io/posts/</loc>
+    <loc>https://ivkus.github.io/posts/cpp/traits/</loc>
+    <lastmod>2022-05-27T10:15:38+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://ivkus.github.io/tags/cpp/</loc>
     <lastmod>2022-05-26T18:36:33+08:00</lastmod>
   </url>
   
@@ -18,7 +23,7 @@
   </url>
   
   <url>
-    <loc>https://ivkus.github.io/posts/cpp_emptyclass_opt/</loc>
+    <loc>https://ivkus.github.io/posts/cpp/cpp_emptyclass_opt/</loc>
     <lastmod>2022-05-26T18:36:33+08:00</lastmod>
   </url>
   
@@ -28,7 +33,7 @@
   </url>
   
   <url>
-    <loc>https://ivkus.github.io/posts/systemd_read/</loc>
+    <loc>https://ivkus.github.io/posts/osc/systemd_read/</loc>
     <lastmod>2020-12-24T21:54:51+08:00</lastmod>
   </url>
   
@@ -43,7 +48,7 @@
   </url>
   
   <url>
-    <loc>https://ivkus.github.io/posts/thinking_in_multithread/</loc>
+    <loc>https://ivkus.github.io/posts/myth/thinking_in_multithread/</loc>
     <lastmod>2020-03-21T21:41:48+08:00</lastmod>
   </url>
   
@@ -58,7 +63,7 @@
   </url>
   
   <url>
-    <loc>https://ivkus.github.io/posts/waf/</loc>
+    <loc>https://ivkus.github.io/posts/osc/waf/</loc>
     <lastmod>2019-07-26T23:26:57+08:00</lastmod>
   </url>
   
@@ -68,7 +73,7 @@
   </url>
   
   <url>
-    <loc>https://ivkus.github.io/posts/ns3_typeid/</loc>
+    <loc>https://ivkus.github.io/posts/osc/ns3_typeid/</loc>
     <lastmod>2018-07-29T23:23:55+08:00</lastmod>
   </url>
   

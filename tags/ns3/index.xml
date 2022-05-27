@@ -13,10 +13,10 @@
     
     <item>
       <title>TypeId in NS3</title>
-      <link>https://ivkus.github.io/posts/ns3_typeid/</link>
+      <link>https://ivkus.github.io/posts/osc/ns3_typeid/</link>
       <pubDate>Sun, 29 Jul 2018 23:23:55 +0800</pubDate>
       
-      <guid>https://ivkus.github.io/posts/ns3_typeid/</guid>
+      <guid>https://ivkus.github.io/posts/osc/ns3_typeid/</guid>
       <description>&lt;p&gt;NS3作为一个网络仿真库，出于性能的考量选择了C++。在写仿真程序时，不可避免的要对各种实体进行建模，自然C++中的class成了唯一可选的方案。不加任何技巧的class的确可以满足对某些实体的建模，可是在仿真软件的编写中需要有足够的动态性，比如有这样一些需求：&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;动态的获知某个实体所具有的各类属性与属性的值&lt;/li&gt;

@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+
+
+<html lang="zh-cn" data-theme="">
+<head>
+    
+        
+<meta charset="utf-8">
+<meta name="HandheldFriendly" content="True">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer-when-downgrade">
+
+<title>Waf - a Python based build system - 存留处</title>
+
+<meta name="description" content="看懂这篇文章需要一点使用waf的经验，不过也不费事，看看例子也够了。">
+
+
+
+
+
+<link rel="icon" type="image/x-icon" href="https://ivkus.github.io/favicon.ico">
+<link rel="apple-touch-icon-precomposed" href="https://ivkus.github.io/favicon.png">
+
+
+<style>
+  body {
+    visibility: hidden;
+    opacity: 0;
+  }
+</style>
+
+<noscript>
+  <style>
+    body {
+      visibility: visible;
+      opacity: 1;
+    }
+  </style>
+</noscript>
+
+
+
+    
+
+
+
+
+
+    
+    
+        
+    
+    
+
+    
+        <link rel="stylesheet" href="https://ivkus.github.io/css/style.min.c0f14e5462dab0ccfdd33a7517489c51f8e629cf051234533dce5e88fa29274b.css" integrity="sha256-wPFOVGLasMz90zp1F0icUfjmKc8FEjRTPc5eiPopJ0s=">
+    
+
+
+
+
+
+    
+
+    
+
+
+
+
+
+    
+    
+        
+    
+    
+
+    
+        <script src="https://ivkus.github.io/js/script.min.0ac446ff60cfd2037010e05589e719afdf147b05baf883558bf00ed7a5efb1dc.js" type="text/javascript" charset="utf-8" integrity="sha256-CsRG/2DP0gNwEOBViecZr98UewW6&#43;INVi/AO16Xvsdw="></script>
+    
+
+
+
+
+
+
+
+<meta property="og:title" content="Waf - a Python based build system" />
+<meta property="og:description" content="看懂这篇文章需要一点使用waf的经验，不过也不费事，看看例子也够了。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ivkus.github.io/posts/osc/waf/" />
+<meta property="article:published_time" content="2019-07-26T23:26:57+08:00" />
+<meta property="article:modified_time" content="2019-07-26T23:26:57+08:00" />
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Waf - a Python based build system"/>
+<meta name="twitter:description" content="看懂这篇文章需要一点使用waf的经验，不过也不费事，看看例子也够了。"/>
+
+
+
+
+
+
+
+
+
+
+
+    
+</head>
+<body>
+    <a class="skip-main" href="#main">Skip to main content</a>
+    <div class="container">
+        <header class="common-header"> 
+            
+                <div class="header-top">
+    <h1 class="site-title">
+    <a href="/">存留处</a>
+</h1>
+    <ul class="social-icons">
+
+
+
+
+
+</ul>
+</div>
+
+    <nav>
+        
+        
+        <a class="" href="https://ivkus.github.io/posts/" title="Archive">Archive</a>
+        
+        <a class="" href="https://ivkus.github.io/tags/" title="">Tags</a>
+        
+        <a class="" href="https://ivkus.github.io/about/" title="">About</a>
+        
+    </nav>
+
+
+
+
+            
+        </header>
+        <main id="main" tabindex="-1"> 
+            
+    
+
+    <article class="post h-entry">
+        <div class="post-header">
+            <header>
+                <h1 class="p-name post-title">Waf - a Python based build system</h1>
+
+                
+            </header>
+        </div>
+        <div class="content e-content">
+            <p>看懂这篇文章需要一点使用waf的经验，不过也不费事，看看例子也够了。</p>
+<h1 id="构建系统简谈">构建系统简谈</h1>
+<p>软件构建系统不像是个很多人在研究的东西，所以在网络上很少能找到剖析某个构建系统原理、或者阐述构建系统principle的文章。看ns3的过程中接触到了waf，发现其文档<a href="https://waf.io/book/">waf book</a>很好的阐述了构建系统的一些基础知识，个人认为比cmake的文档好一些。因为其核心只有十几个文件，这个构建系统只需要一个10k+的waf文件，所以可以放到版本库里（像对python的评价一样，batteries included），唯一要求就是环境中有python，而这对一个开发人员来说显然不是一件困难的事情。</p>
+<pre><code>|-- Build.py
+|-- ConfigSet.py
+|-- Configure.py
+|-- Context.py
+|-- Errors.py
+|-- Logs.py
+|-- Node.py
+|-- Options.py
+|-- Runner.py
+|-- Scripting.py
+|-- Task.py
+|-- TaskGen.py
+|-- Tools [directory]
+|-- Utils.py
+|-- ansiterm.py
+|-- extras
+|-- fixpy2.py
+`-- processor.py
+</code></pre><p>以上便是所有waf的内容，可以看到涉及到的文件不算多。Tools下包含了很多语言的构建工具，比如c/c++/java/qt/ruby/tex等等，如果自己有能力定制，可以只保留自己项目里需要的tool，可以做到更小。（虽然个人认为没有必要）</p>
+<h1 id="核心抽象">核心抽象</h1>
+<p>如果是写编译语言的(c/c++/rust/go/fc/d)，那么构建系统是每天都在用的。在敲击make<!-- raw HTML omitted -->之后，屏幕上出现了一系列的自动运行的命令，然后就是漫长的等待。用waf也一样，一般是./waf configure build clean dist&hellip;再等机器的轰鸣停止后继续工作流。waf提供了一些核心的抽象，从而能够表达出构建这个活动的几个关键方面：</p>
+<ol>
+<li>像make clean dist类似，可以在构建命令后面自行添加指令，这种capibility由Context提供</li>
+<li>构建系统最重要的功能就是按需构建，要判断出哪些文件要编译而哪些是不用的，这用到了TaskGen与Task的抽象</li>
+<li>并行构建提升速度，由Runner来提供。</li>
+</ol>
+<p>这3个抽象几乎相互独立，个人认为是很好的一个抽象。</p>
+<h2 id="context">Context</h2>
+<p>每一个跟在./waf后面的指令，都对应一个Context。如果是<code>build/configure/list/step/install/uninstall</code>，waf自行提供了对应的Context的子类用于执行这些命令，如果是其他的自定义函数，那么就会依托于Context本身，可以在自定义函数里用Context自定义的函数，比如recurse来遍历子目录执行子目录里的同名自定义函数。</p>
+<p>如果项目根目录下的<code>wscript</code>有do_sth，就可以./waf do_sth</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">do_sth</span>(ctx):
+    ctx<span style="color:#f92672">.</span>load(<span style="color:#e6db74">&#39;compiler_cxx&#39;</span>)    <span style="color:#75715e"># 加载工具</span>
+    ctx<span style="color:#f92672">.</span>recurse([<span style="color:#e6db74">&#39;src&#39;</span>,<span style="color:#e6db74">&#39;dep&#39;</span>])  <span style="color:#75715e"># 遍历子目录，执行子目录下wscript里的do_sth</span>
+    ctx<span style="color:#f92672">.</span>exec_command(<span style="color:#e6db74">&#39;touch foo.txt&#39;</span>)
+    ctx<span style="color:#f92672">.</span>msg(<span style="color:#e6db74">&#39;hello&#39;</span>)
+</code></pre></div><p>这里函数参数ctx就是指向了Context的一个实例，而do_sth是作为Context上的一个方法而存在的，可以直观的理解为，我们为Context增加了一个自定义的do_sth方法，所以可以自由调用Context里本来提供的方法。</p>
+<p>./waf build执行时绑定的Context是BuildConetxt，在Build.py里被定义，在waf build的时候，执行的是wscript里<code>def build(bld)</code>这个方法。举一个例子</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">configure</span>(conf):
+    conf<span style="color:#f92672">.</span>load(<span style="color:#e6db74">&#39;compiler_cxx&#39;</span>)
+<span style="color:#66d9ef">def</span> <span style="color:#a6e22e">build</span>(bld):
+    bld<span style="color:#f92672">.</span>shlib(source<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;a.cpp&#39;</span>, target<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;mylib3&#39;</span>)
+    bld<span style="color:#f92672">.</span>program(source<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;main.cpp&#39;</span>, target<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;app&#39;</span>, use<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;mylib&#39;</span>)
+    bld<span style="color:#f92672">.</span>stlib(target<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;foo&#39;</span>, source<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;b.cpp&#39;</span>)
+    <span style="color:#75715e"># 直接调用bld</span>
+    bld(features <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;c cprogram glib2&#39;</span>,
+        use      <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;GLIB GIO GOBJECT&#39;</span>,
+        source   <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;main.c org.glib2.test.gresource.xml&#39;</span>,
+        target   <span style="color:#f92672">=</span> <span style="color:#e6db74">&#39;gsettings-test&#39;</span>)
+</code></pre></div><p>这里bld指向了BuildContext的一个实例，这意味着BuildContext里所有的方法都在这个函数里都是可用的，可以通过<code>bld.xxx</code>来调用。</p>
+<p>值得注意的是，在Build.py中，可是找不到<code>shlib/probram/stlib</code>这3个方法的，但是在这里却调用成功没有报错，这全部依赖于<code>conf.load('compiler_cxx')</code>这一句。执行这句话后，就给bld指向的BuildContext实例绑定了<code>shlib/program/stlib</code>这3个方法。
+那直接调用<code>bld()</code>呢？这个就要看Build.py里的<code>BuildContex():__call__</code>方法了。从这里开始，就涉及到<code>TaskGen</code>这个抽象了。</p>
+<h2 id="taskgen--task">TaskGen &amp; Task</h2>
+<p>最终需要执行的编译指令、中间代码生成等，每一条都对应一个task，我们不可能去一个一个的写task，而是希望以一种声明式的方法表达想要做的事情，这就是task_gen所完成的任务。从声明式表达到生成task的这项任务，由waf build完成。在执行的过程中，会对搜集到的每个task_gen执行一下post()，然后这个task_gen就生成了自己所有的task。作为一个灵活的构建系统，waf提供了很多方法来让我们hook到post()的过程中。对于每个task，到底该不该执行需不需要执行，它自己会追踪自己的依赖，职责分离，我很喜欢这个设计思路。</p>
+<p>以前一小节为例，共在build(bld)里一共进行了4次调用，这意味着生成了4个task_gen的实例，在真正执行构建过程之前，会有一个地方对这4个实例各自调用一下post()，把所有的task_gen都消灭掉，变成task。至于怎么hook，这是个比较关键的点，如果理解了，就能很好的自定义waf了。</p>
+<p>首先看看写好的wscript，它的声明式体现在什么地方呢？体现在函数参数里。得益于python的语言特点，可以随便加参数，然后在函数实现里用**kw来取这些值。这意味着可以随便加自己想要的key=value进去，这些加进去的参数是可以在自定义的hook过程中取到的，这算是可自定义的一个基础。（ruby自定义的能力更强，毕竟dsl是其强项，但可能限于ruby的流行程度以及发行版是否默认安装，让作者最后选择了python，不过也已经够用了）</p>
+<p>在post()的过程中，会从<code>task_gen.meths[]</code>里依次取出方法来执行，hook的方式就是把自定义的方法塞到这个<code>task_gen.meths[]</code>之中。这只要在自定义的方法上加一个<code>@TaskGen.taskgen_method</code>的注解就能实现，还是挺简洁的吧？声明式中写的key=val,都能通过taskgen.key取到，这样一来，几乎就获得了无限的能力来自定义构建过程了。</p>
+<p>在<code>taskgen.meths[]</code>里有几项预定义的方法，waf也提供了指令来让我们定制自己方法执行的位置。总而言之，想要什么内容，直接在wscript里以key=val的方式指定，然后在自己的方法里用getattr来取就行了。</p>
+<p>这也只是个支持性框架，具体到某个语言(c/c++)是怎么做的，到后面再看。</p>
+<h2 id="runner">Runner</h2>
+<p>waf自己会默认起和cpu core相同数量的进程来执行构建认任务，而且构建过程的输出也很清晰漂亮。waf也提供了lazy的模式，不是一下子把所有的task_gen都转化，所以也是用了一些技巧来达成这个目的。在看waf代码的过程中，能看到很多pythonic和近乎炫技的技法，可见作者真是把python语言玩弄于股掌之中。</p>
+<p>如何实现<code>make -j</code>的效果？答案是<code>Semphore</code>，这里的job control是由几个类相互交互完成的。虽说Python的线程是鸡肋，但完成任务分派还是绰绰有余。这里分三类线程：</p>
+<ol>
+<li>主线程，只有1个，即敲回车后生成的Python进程，其中负责交互的类为<code>Parallel</code>。</li>
+<li>分派线程，也只有1个，叫<code>Spawner</code>，与<code>Parallel</code>互相引用。主线程决定了并行数量，然后在分派线程里初始化一个对应数量的<code>Semphore</code>。</li>
+<li>工作线程<code>Consumer</code>，有一个<code>Task</code>，就得起1个<code>Consumer</code></li>
+</ol>
+<p>其实到现在的位置，要执行的<code>Task</code>已经都放在一个队列<code>ready</code>里了。遍历这个队列，acquire semphore，开新的<code>Consume</code>执行<code>Task</code>。如果<code>Semphore</code>用完了，那么遍历的过程就阻塞，直到<code>Task</code>执行结束后<code>Consumer</code>再把这个<code>Semphore</code>加回去。</p>
+<p><code>Consume</code>从<code>ready</code>队列里获取任务执行，结束后放回<code>out</code>队列里。主线程在一个循环里从<code>out</code>往回拿任务，看看对不对，然后做一些统计或者直接结束构建。</p>
+<p>这里提到的所有类，都在Runner.py里。</p>
+<p><code>Consumer</code>里调用的方法最后都会走到Utils.run_regular_process里，通过subprocess.Popen来完成真正的命令调用。</p>
+<h1 id="c的构建">C++的构建</h1>
+<p>前面的核心抽象确实相当抽象，只是提供了一种框架来执行并行执行一些任务，关于构建本身则没有任何的提及。至于如何用这种工具做到构建C++工程，则并不是一件容易的事情。</p>
+<p>cmake社区近些年发起了轰轰烈烈的modern cmake的运动，即迁移到target based的构建描述，而非原先支持的流水帐构建。反观waf自带的C++构建方式，天然就是target based，只不过在waf的范畴里，这个叫task generator。</p>
+<p>C++代码最终的产出是什么呢？有3种：</p>
+<ol>
+<li>可执行程序</li>
+<li>静态库</li>
+<li>动态库</li>
+</ol>
+<p>有的C++程序其实是作为其他程序的依赖而存在，典型的比如各种libssl-dev。这种类型的产出不仅只有可加载的二进制，而且还要给其他库提供编译支持，即头文件。</p>
+<p>有人喜欢写all in one的代码，典型的比如Fabrice Bellard写quickjs，一个文件搞定。这种代码，其实并不太需要构建系统，几行shell脚本就全都搞定，反正每次都要重新编译。不过普通人还是选普通配置，该分模块就分模块，老老实实的一个一个module去完成功能。减少构建的时间，减少重复编译的工作，这就需要构建系统的辅助，来找出哪些需要重新编译而那些可以复用。</p>
+<p>可以从2个角度来思考C++的构建</p>
+<ol>
+<li>找出来哪些需要重新构建，这个工作叫依赖管理</li>
+<li>每个构建应该怎么完成</li>
+</ol>
+<p>以如下的构建脚本为例吧。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">build</span>(bld):
+	bld<span style="color:#f92672">.</span>shlib(source<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;a.cpp b.cpp&#39;</span>, target<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;mylib&#39;</span>)
+	bld<span style="color:#f92672">.</span>program(source<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;main.cpp&#39;</span>, target<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;app&#39;</span>, use<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;mylib&#39;</span>)
+</code></pre></div><p>这里申明了一个动态库<code>mylib</code>，由2个文件构建而成；然后申明了一个二进制的程序<code>app</code>，用到了<code>mylib</code>。
+我们用手工编译的话，需要如下的步骤：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-shell" data-lang="shell">$ g++ -c a.cpp -o a.o
+$ g++ -c b.cpp -o b.o
+$ g++ --shared a.o b.o -o mylib.so
+$ g++ -c main.cpp -o main.o
+$ g++ main.o -o app -lmylib
+</code></pre></div><p>其中每一行就是一个task，那么如何从build里的那几句话得到这些task呢？说来话长，要用到waf提供的一系列脚手架，就一个一个慢慢来吧！</p>
+<h2 id="task-generator解构">Task Generator解构</h2>
+<p>这两次对bld.xxx的调用，生成了2个task generator，之后task_gen经过一系列的处理，生成了5个task。
+不过，task generator到底是什么？看看文档里的说法吧！</p>
+<blockquote>
+<p>task generator应当有如下的特征</p>
+<ol>
+<li>attribute(就是bld.shlib、bld.program的入参)仅在需要处理的时候才处理</li>
+<li>对attribute的存在性不做要求</li>
+<li>可以根据单个task generator来对构建过程做出调整</li>
+<li>应该提供与插件结合的能力</li>
+</ol>
+</blockquote>
+<p>所以，实现这样的一个功能还是挺难的，文档里列举了这么一些方式：</p>
+<ol>
+<li>用类来抽象task generator，通过继承的方式来解决添加功能的问题</li>
+<li>用python decorator来添加新功能，不过这种方式只能达到添加的功能，没办法删除已有的功能</li>
+<li>扁平化的方式，只声明自己功能执行的时候需要满足的条件，就像面向切片编程一样。</li>
+</ol>
+<p>第3个看起来不错，不如看看是怎么实现的吧。</p>
+<p>要产出task，那么最开始的方法是什么？是<code>task_gen.post()</code>，在BuildContext里被调用。这个方法其实只做了一件事情：根据设置的feature，填充task_gen.meths，处理一下里面顺序，然后挨个调用就行。</p>
+<p>那么就很明显了，对于所有的task generator，都有一个feature是<code>*</code>，而与<code>*</code>相互关联的方法只有2个:</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#a6e22e">@feature</span>(<span style="color:#e6db74">&#39;*&#39;</span>)
+<span style="color:#66d9ef">def</span> <span style="color:#a6e22e">process_source</span>(self):
+    <span style="color:#f92672">...</span><span style="color:#960050;background-color:#1e0010">处理</span>bld<span style="color:#f92672">.</span>xyz(source<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;a.c b.py c.tex&#39;</span>)<span style="color:#960050;background-color:#1e0010">的</span>source
+
+<span style="color:#a6e22e">@feature</span>(<span style="color:#e6db74">&#39;*&#39;</span>)
+<span style="color:#a6e22e">@before_method</span>(<span style="color:#e6db74">&#39;process_source&#39;</span>)
+<span style="color:#66d9ef">def</span> <span style="color:#a6e22e">process_rule</span>(self):
+    <span style="color:#f92672">...</span><span style="color:#960050;background-color:#1e0010">处理</span>bld<span style="color:#f92672">.</span>xyz(rule<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;cp SRC[0] TGT[0]&#39;</span>)<span style="color:#960050;background-color:#1e0010">的</span>rule
+</code></pre></div><p>这就是waf所有魔法的起点。有了这2个方法，好像就有了锚点一样，如果有自己的功能想要添加，就用<code>@feature</code>加上去，如果想要调整顺序，还有<code>@before_method\@after_method</code>。</p>
+<h2 id="extension-mapping">extension mapping</h2>
+<p>在C++构建中，光有这些方法，离生成可用的task好像还有点远。其实并不远，只是需要明确到底是在哪一步hook进去的，这步就是前面提到的<code>process_source</code>。</p>
+<p>在<code>process_source</code>里，对source这个attribute里的每一个文件，都通过其后缀找到对应的处理函数并执行。c/c++代码的后缀无非就是c/cc/cxx/cpp/h/hpp/hxx之类的，这些waf自带的tool就已经把这些常用的都包含进去了。</p>
+<p>是不是有种，你以为我在第二层，其实我在第五层的感觉？实话说这就是我自己在追逻辑时候的感觉。如果feature是第一层，那么feature塞function到task_gen.meths里就是第二层；第二层提供了的一个方法<code>process_source</code>是第三层，<code>process_source</code>自己又提供了extension mapping，这就是第四层；对应到每一个extension，就可以到各自的构建过程了，这也是提供给其他的插件的hook点。</p>
+<p>真真儿的，有5层。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-python" data-lang="python"><span style="color:#a6e22e">@TaskGen.extension</span>(<span style="color:#e6db74">&#39;.cpp&#39;</span>,<span style="color:#e6db74">&#39;.cc&#39;</span>,<span style="color:#e6db74">&#39;.cxx&#39;</span>,<span style="color:#e6db74">&#39;.C&#39;</span>,<span style="color:#e6db74">&#39;.c++&#39;</span>)
+<span style="color:#66d9ef">def</span> <span style="color:#a6e22e">cxx_hook</span>(self, node):
+	<span style="color:#e6db74">&#34;Binds c++ file extensions to create :py:class:`waflib.Tools.cxx.cxx` instances&#34;</span>
+	<span style="color:#66d9ef">return</span> self<span style="color:#f92672">.</span>create_compiled_task(<span style="color:#e6db74">&#39;cxx&#39;</span>, node)
+</code></pre></div><p>看函数名就知道了，这里就是task真正产生的地方！</p>
+<h1 id="后记">后记</h1>
+<p>其实也不能完全算看完吧，还有很多具体的细节没有提到，典型的比如变动检测（用md5而没用update time，并且联系到一个动态ID上），动态编译build function（把run_str变成一个task的方法，执行这个方法调用subprocess.Popen），以及其他种种；不过已经可以稍微帮助别人理解一下这个构建工具的基本思想，以及一个稍微具体的实例来体会构建过程，希望能起到一点抛砖引玉的作用。</p>
+        </div>
+        
+
+
+<div class="post-info">
+    
+        <div class="post-date dt-published">2019-07-26</div>
+    
+
+    <a class="post-hidden-url u-url" href="https://ivkus.github.io/posts/osc/waf/">https://ivkus.github.io/posts/osc/waf/</a>
+    <a href="https://ivkus.github.io/" class="p-name p-author post-hidden-author h-card" rel="me"></a>
+
+
+    <div class="post-taxonomies">
+        
+            
+                <ul class="post-tags">
+                    
+                        
+                        <li><a href="https://ivkus.github.io/tags/python/">#python</a></li>
+                    
+                        
+                        <li><a href="https://ivkus.github.io/tags/buildsystem/">#buildsystem</a></li>
+                    
+                </ul>
+        
+    </div>
+</div>
+
+    </article>
+
+    
+
+    
+
+    
+        
+
+
+
+
+
+
+
+    
+
+        </main>
+        
+            <footer class="common-footer">
+    
+    
+
+    <div class="common-footer-bottom">
+        
+        <div class="copyright">
+            <p>© 2022<br>
+            Powered by <a target="_blank" rel="noopener noreferrer" href="https://gohugo.io/">Hugo</a>, theme <a target="_blank" rel="noopener noreferrer" href="https://github.com/mitrichius/hugo-theme-anubis">Anubis</a>.<br>
+            
+            </p>  
+        </div> 
+
+        
+
+    
+
+
+
+    <button class="theme-switcher">
+        Dark theme
+    </button>
+
+
+<script>
+const STORAGE_KEY = 'user-color-scheme'
+const defaultTheme = "auto"
+
+let currentTheme
+let switchButton
+let autoDefinedScheme = window.matchMedia('(prefers-color-scheme: dark)')
+
+const autoChangeScheme = e => {
+    currentTheme = e.matches ? 'dark' : 'light'
+    document.documentElement.setAttribute('data-theme', currentTheme)
+    changeButtonText()
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    switchButton = document.querySelector('.theme-switcher')
+    currentTheme = detectCurrentScheme()
+    if (currentTheme == 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark')
+    }
+    if (currentTheme == 'auto') {
+        autoChangeScheme(autoDefinedScheme);
+        autoDefinedScheme.addListener(autoChangeScheme);
+    }
+
+    if (switchButton) {
+        changeButtonText()
+        switchButton.addEventListener('click', switchTheme, false)
+    }
+  
+    showContent()
+})
+
+function detectCurrentScheme() {
+    if (localStorage.getItem(STORAGE_KEY)) {
+        return localStorage.getItem(STORAGE_KEY)
+    } 
+    if (defaultTheme) {
+        return defaultTheme
+    } 
+    if (!window.matchMedia) {
+        return 'light'
+    } 
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark'
+    }
+    return 'light'
+}
+
+function changeButtonText()
+{   
+    if (switchButton) {
+        switchButton.textContent = currentTheme == 'dark' ?  "Light theme" : "Dark theme"
+    }
+}
+
+function switchTheme(e) {
+    if (currentTheme == 'dark') {
+        localStorage.setItem(STORAGE_KEY, 'light')
+        document.documentElement.setAttribute('data-theme', 'light')
+        currentTheme = 'light'
+    } else {
+        localStorage.setItem(STORAGE_KEY, 'dark')
+        document.documentElement.setAttribute('data-theme', 'dark')
+        currentTheme = 'dark'
+    }
+    changeButtonText()
+}
+
+function showContent() {
+    document.body.style.visibility = 'visible';
+    document.body.style.opacity = 1;
+}
+</script>   
+    </div>
+
+    <p class="h-card vcard">
+
+    <a href=https://ivkus.github.io/ class="p-name u-url url fn" rel="me"></a> 
+
+     
+        /
+        <a class="p-email u-email email" rel="me" href="mailto:aiueclipse@mail.com">aiueclipse@mail.com</a>
+    
+
+    
+</p> 
+</footer>
+
+        
+    </div>
+</body>
+</html>

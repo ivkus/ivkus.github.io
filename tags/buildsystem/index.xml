@@ -13,10 +13,10 @@
     
     <item>
       <title>Waf - a Python based build system</title>
-      <link>https://ivkus.github.io/posts/waf/</link>
+      <link>https://ivkus.github.io/posts/osc/waf/</link>
       <pubDate>Fri, 26 Jul 2019 23:26:57 +0800</pubDate>
       
-      <guid>https://ivkus.github.io/posts/waf/</guid>
+      <guid>https://ivkus.github.io/posts/osc/waf/</guid>
       <description>&lt;p&gt;看懂这篇文章需要一点使用waf的经验，不过也不费事，看看例子也够了。&lt;/p&gt;
 &lt;h1 id=&#34;构建系统简谈&#34;&gt;构建系统简谈&lt;/h1&gt;
 &lt;p&gt;软件构建系统不像是个很多人在研究的东西，所以在网络上很少能找到剖析某个构建系统原理、或者阐述构建系统principle的文章。看ns3的过程中接触到了waf，发现其文档&lt;a href=&#34;https://waf.io/book/&#34;&gt;waf book&lt;/a&gt;很好的阐述了构建系统的一些基础知识，个人认为比cmake的文档好一些。因为其核心只有十几个文件，这个构建系统只需要一个10k+的waf文件，所以可以放到版本库里（像对python的评价一样，batteries included），唯一要求就是环境中有python，而这对一个开发人员来说显然不是一件困难的事情。&lt;/p&gt;

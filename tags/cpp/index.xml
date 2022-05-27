@@ -13,10 +13,10 @@
     
     <item>
       <title>【翻译】c&#43;&#43;类中“空成员”的优化</title>
-      <link>https://ivkus.github.io/posts/cpp_emptyclass_opt/</link>
+      <link>https://ivkus.github.io/posts/cpp/cpp_emptyclass_opt/</link>
       <pubDate>Thu, 26 May 2022 18:36:33 +0800</pubDate>
       
-      <guid>https://ivkus.github.io/posts/cpp_emptyclass_opt/</guid>
+      <guid>https://ivkus.github.io/posts/cpp/cpp_emptyclass_opt/</guid>
       <description>&lt;p&gt;本文来自于&lt;a href=&#34;http://www.cantrip.org/emptyopt.html&#34;&gt;The &amp;ldquo;Empty Member&amp;rdquo; C++ Optimization&lt;/a&gt;。是我在看c++ std::string代码时遇到的一个链接，其中解释了为什么_Alloc_hider会采用inhert from Alloc的原因。&lt;/p&gt;
 &lt;p&gt;文章应该是97年的，所以里面的指针长度还是4 byte。&lt;/p&gt;
 &lt;h1 id=&#34;c类中空成员的优化&#34;&gt;c++类中“空成员”的优化&lt;/h1&gt;
@@ -61,13 +61,13 @@
     &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Bar&lt;/span&gt; b;
   };
   Foo f;
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;那么&lt;code&gt;f.b&lt;/code&gt;和&lt;code&gt;f.a[]&lt;/code&gt;分别是什么？如果&lt;code&gt;sizeof(Bar)&lt;/code&gt;是0，那么这2个地址就是一样的。如果你用地址来作为对象的标识，那么&lt;code&gt;f.b&lt;/code&gt;和&lt;code&gt;f.a[0]&lt;/code&gt;就是同一个对象了。C++标准委员会通过禁止空类的对象大小为0来解决这个问题。&lt;/p&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;那么&lt;code&gt;f.b&lt;/code&gt;和&lt;code&gt;f.a[]&lt;/code&gt;分别是什么？如果&lt;code&gt;sizeof(Bar)&lt;/code&gt;是0，那么这2个地址就是一样的。如果你用地址来作为对象的标识，那么&lt;code&gt;f.b&lt;/code&gt;和&lt;code&gt;f.a[0]&lt;/code&gt;就是同一个对象。C++标准委员会通过禁止空类的对象大小为0来解决这个问题。&lt;/p&gt;
 &lt;p&gt;但为什么还需要占据4 byte的大小呢？虽然大部分的编译器认为&lt;code&gt;sizeof(Bar) == 1&lt;/code&gt;，但4 byte是对象对齐的需求。比如：&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Baz&lt;/span&gt; {
     Bar b;
     &lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt; p;
   };
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;结构体&lt;code&gt;Baz&lt;/code&gt;在大多数的体系结构上大小是8 byte，编译器自己在Baz::b后面添加了补齐，是为了让Baz::p不会横跨一个字(word)。&lt;/p&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;结构体&lt;code&gt;Baz&lt;/code&gt;在大多数的体系结构上大小是8 byte，编译器自己在Baz::b后面添加补齐，是为了让Baz::p不会横跨一个字(word)。&lt;/p&gt;
 &lt;pre&gt;&lt;code&gt;  struct Baz
   +-----------------------------------+
   | +-------+-------+-------+-------+ |
@@ -95,7 +95,7 @@
   +-----------------------------------+
 &lt;/code&gt;&lt;/pre&gt;&lt;p&gt;编译器并未要求实现成这个样子，但是你可以认为大部分标准的编译器就是这样实现的。&lt;/p&gt;
 &lt;h2 id=&#34;消除膨胀&#34;&gt;消除膨胀&lt;/h2&gt;
-&lt;p&gt;现在你知道了消除这个开销的原理了，问题是接下来怎么做？最直观的，list&amp;lt;&amp;gt;直接继承Allocator，如下：&lt;/p&gt;
+&lt;p&gt;现在你知道了消除这个开销的原理，问题是接下来怎么做？最直观的，list&amp;lt;&amp;gt;直接继承Allocator，如下：&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;T&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Alloc&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; allocator&lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;T&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
     &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;list&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; &lt;span style=&#34;color:#66d9ef&#34;&gt;private&lt;/span&gt; Alloc {
       . . .
@@ -127,7 +127,7 @@
     };
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;采用这种方法实现的话，申请内存就用&lt;code&gt;head.allocate()&lt;/code&gt;。没有额外的开销，list&amp;lt;&amp;gt;用起来也和以前一样。不过就像其他做的好的优化一样，实现上总是有点丑陋，但总归不会影响到接口了。&lt;/p&gt;
 &lt;h2 id=&#34;统一一点的解决方案&#34;&gt;统一一点的解决方案&lt;/h2&gt;
-&lt;p&gt;当然还有提升的空间了。看看下面这个template&lt;/p&gt;
+&lt;p&gt;当然还有提升的空间。看看下面这个template&lt;/p&gt;
 &lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c++&#34; data-lang=&#34;c++&#34;&gt;  &lt;span style=&#34;color:#66d9ef&#34;&gt;template&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;&amp;lt;&lt;/span&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Base&lt;/span&gt;, &lt;span style=&#34;color:#66d9ef&#34;&gt;class&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;Member&lt;/span&gt;&lt;span style=&#34;color:#f92672&#34;&gt;&amp;gt;&lt;/span&gt;
     &lt;span style=&#34;color:#66d9ef&#34;&gt;struct&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;BaseOpt&lt;/span&gt; &lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; Base {
       Member m;
@@ -146,7 +146,7 @@
         &lt;span style=&#34;color:#f92672&#34;&gt;:&lt;/span&gt; head_(a,&lt;span style=&#34;color:#ae81ff&#34;&gt;0&lt;/span&gt;) { . . . }
       . . .
     };
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这个实现相比与最开始的版本，看起来也没那么不堪了。其他的STL容器，也可以借助BaseOpt来简化代码。只不过，成员函数申请内存的时候就会奇怪一些了，这个我们现在还暂时不考虑了。&lt;/p&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这个实现相比与最开始的版本，看起来也没那么不堪。其他的STL容器，也可以借助BaseOpt来简化代码。只不过，成员函数申请内存的时候就会奇怪一些，这个我们现在还暂时不考虑。&lt;/p&gt;
 &lt;p&gt;现在可以在BaseOpt定义的地方加上很好的文档来描述这个优化技术了。&lt;/p&gt;
 &lt;p&gt;也可以在BaseOpt里添加一些成员，但是并不建议这样做。这可能会造成和Base里名称冲突（就像我们在第一次尝试消除膨胀的代码里一样）。&lt;/p&gt;
 &lt;h2 id=&#34;收尾&#34;&gt;收尾&lt;/h2&gt;
@@ -155,10 +155,10 @@
     
     <item>
       <title>多线程交互的思考</title>
-      <link>https://ivkus.github.io/posts/thinking_in_multithread/</link>
+      <link>https://ivkus.github.io/posts/myth/thinking_in_multithread/</link>
       <pubDate>Sat, 21 Mar 2020 21:41:48 +0800</pubDate>
       
-      <guid>https://ivkus.github.io/posts/thinking_in_multithread/</guid>
+      <guid>https://ivkus.github.io/posts/myth/thinking_in_multithread/</guid>
       <description>&lt;p&gt;最近开始写多线程的程序，整理一下对多线程代码的思考。&lt;/p&gt;
 &lt;h1 id=&#34;用多线程的时机&#34;&gt;用多线程的时机&lt;/h1&gt;
 &lt;p&gt;多线程为任务划分提供了天然的要求。如果能抽象出来流水线的业务模型，便有了多线程的用武之地。&lt;/p&gt;
@@ -185,10 +185,10 @@
     
     <item>
       <title>TypeId in NS3</title>
-      <link>https://ivkus.github.io/posts/ns3_typeid/</link>
+      <link>https://ivkus.github.io/posts/osc/ns3_typeid/</link>
       <pubDate>Sun, 29 Jul 2018 23:23:55 +0800</pubDate>
       
-      <guid>https://ivkus.github.io/posts/ns3_typeid/</guid>
+      <guid>https://ivkus.github.io/posts/osc/ns3_typeid/</guid>
       <description>&lt;p&gt;NS3作为一个网络仿真库，出于性能的考量选择了C++。在写仿真程序时，不可避免的要对各种实体进行建模，自然C++中的class成了唯一可选的方案。不加任何技巧的class的确可以满足对某些实体的建模，可是在仿真软件的编写中需要有足够的动态性，比如有这样一些需求：&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;动态的获知某个实体所具有的各类属性与属性的值&lt;/li&gt;
