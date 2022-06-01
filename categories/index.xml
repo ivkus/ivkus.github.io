@@ -3,11 +3,11 @@
   <channel>
     <title>Categories on 存留处</title>
     <link>https://ivkus.github.io/categories/</link>
-    <description>存留处 (Categories)</description>
+    <description>Recent content in Categories on 存留处</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
     
-    <atom:link href="https://ivkus.github.io/categories/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://ivkus.github.io/categories/index.xml" rel="self" type="application/rss+xml" />
     
     
   </channel>

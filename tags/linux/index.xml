@@ -3,135 +3,21 @@
   <channel>
     <title>linux on 存留处</title>
     <link>https://ivkus.github.io/tags/linux/</link>
-    <description>存留处 (linux)</description>
+    <description>Recent content in linux on 存留处</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
     <lastBuildDate>Thu, 24 Dec 2020 21:54:51 +0800</lastBuildDate>
     
-    <atom:link href="https://ivkus.github.io/tags/linux/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://ivkus.github.io/tags/linux/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Systemd阅读笔记</title>
-      <link>https://ivkus.github.io/posts/osc/systemd_read/</link>
+      <link>https://ivkus.github.io/docs/osc/systemd_read/</link>
       <pubDate>Thu, 24 Dec 2020 21:54:51 +0800</pubDate>
       
-      <guid>https://ivkus.github.io/posts/osc/systemd_read/</guid>
-      <description>&lt;p&gt;Systemd的争议挺大的，不来看看大家为什么抵制它吗？&lt;/p&gt;
-&lt;p&gt;需要理顺数据结构，再抓关键流程。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;Reading Date:
-20201211 Fri
-20201212 Sat
-20201213 Sun
-	集中的3天看，理顺了基本的框架
-&lt;/code&gt;&lt;/pre&gt;&lt;h2 id=&#34;overview&#34;&gt;Overview&lt;/h2&gt;
-&lt;pre&gt;&lt;code&gt;# commit 5916c54a8dabd25efa0d78deef78fbfab684b8a4 
-
-  No             filename  linenum
-   1            execute.c     6514
-   2               unit.c     6367
-   3      load-fragment.c     5851
-   4            manager.c     4978
-   5            service.c     4587
-   6             cgroup.c     3778
-   7             socket.c     3517
-   8       dbus-execute.c     3459
-   9       dbus-manager.c     3317
-  10               main.c     2930
-  11          dbus-unit.c     2475
-  12          namespace.c     2384
-  13              mount.c     2204
-  14        dbus-cgroup.c     1718
-  15                job.c     1698
-  16               swap.c     1690
-  17               dbus.c     1250
-  18        transaction.c     1201
-  19          automount.c     1129
-  20             device.c     1120
-  21              timer.c     956
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;拉取了src/core/下代码最多的几个文件。从这个大致能看出来复杂度集中在哪些方面，作为调度各类进程运行状态的一个程序，execute相关的复杂度最大当之无愧，控制进程执行会涉及到方方面面，这也是systemd不愿意跨系统移植的最大阻力吧。&lt;/p&gt;
-&lt;p&gt;unit/service/socket/mount/device/timer/automount/swap这些东西是一类，是作为一种entry而存在，是被动、被调用、被使用的实体。&lt;/p&gt;
-&lt;p&gt;manager/job/transaction/load-fratment是内阁，作为进程驱动的存在。&lt;/p&gt;
-&lt;p&gt;dbus则是暴露了内部功能给其他进程使用，作为接待处，要负责请求命令的转换，所以归为一块相对独立的功能。&lt;/p&gt;
-&lt;h2 id=&#34;data-structure&#34;&gt;Data Structure&lt;/h2&gt;
-&lt;h3 id=&#34;manager&#34;&gt;Manager&lt;/h3&gt;
-&lt;p&gt;如其名所示，&lt;code&gt;Manager&lt;/code&gt;是整个systemd的核心所在。这是一个巨大的结构体。&lt;/p&gt;
-&lt;p&gt;在运行时，主循环就在做一件事，dispatch各种queue。这些个queue都是附着在manager上的，比如&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;
-&lt;p&gt;load queue&lt;/p&gt;
-&lt;p&gt;加载解析unit file到内存中&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;run queue&lt;/p&gt;
-&lt;p&gt;job存在的地方，处理本职工作的地方&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;gc job&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;gc unit&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;cleanup&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;cgroup realize&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;
-&lt;p&gt;dbus queue&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h3 id=&#34;unit&#34;&gt;Unit&lt;/h3&gt;
-&lt;p&gt;每个UnitType都有自己的&lt;code&gt;UnitVTable&lt;/code&gt;注册到全局，&lt;code&gt;UnitVTable&lt;/code&gt;用于操作&lt;code&gt;Unit&lt;/code&gt;。这也是Manager用于控制各类unit的手段。Manager不关心具体的每个unit该怎么操作，它只需要关注自己需要那些操作行为，然后定义到vtable里，由各类unit自己去实现。&lt;/p&gt;
-&lt;h3 id=&#34;job&#34;&gt;Job&lt;/h3&gt;
-&lt;p&gt;需要关注Job状态在何时进行转换。&lt;/p&gt;
-&lt;h2 id=&#34;components&#34;&gt;Components&lt;/h2&gt;
-&lt;p&gt;Systemd开发组在开发的过程中逐渐抽象出来的组件，对于项目级别来说是很好用的。这些代码都放在&lt;code&gt;src/libsystemd&lt;/code&gt;下面，头文件则在&lt;code&gt;src/systemd&lt;/code&gt;。&lt;/p&gt;
-&lt;h3 id=&#34;sd-event&#34;&gt;sd-event&lt;/h3&gt;
-&lt;p&gt;类似于&lt;code&gt;GIO&lt;/code&gt;，封装了自己的eventloop；socketfd、timer、signal都作为一个event source，可以绑定自己的处理函数上去。&lt;/p&gt;
-&lt;h3 id=&#34;sd-bus&#34;&gt;sd-bus&lt;/h3&gt;
-&lt;p&gt;Systemd自己的DBus实现。&lt;/p&gt;
-&lt;h2 id=&#34;startup-procedure-and-main-loop&#34;&gt;Startup Procedure and main loop&lt;/h2&gt;
-&lt;blockquote&gt;
-&lt;p&gt;大量使用了查表，是个查表狂魔项目。&lt;/p&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;静心想想一个init程序要干什么，它的运行时表现是什么？&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;开机的时候要启动各种程序&lt;/li&gt;
-&lt;li&gt;其他程序跑出来的zombie进程要收割&lt;/li&gt;
-&lt;li&gt;开机后用户也会起进服务（daemon），现在这个工作依托给了systemd来完成。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;systemd其实也是一个server程序，只不过和这个server交互的方式比较不一样，不是通过tcp，虽然它也支持，但主要还是dbus的那个unix socket，外加各种信号。而通过&lt;code&gt;sd-event&lt;/code&gt;的统一，这些交互都化身为&lt;code&gt;sd-event-source&lt;/code&gt;，可以被epoll监听。为什么说systemd是linux only，可能也是得益于linux上才有signalfd/eventfd/timerfd吧。&lt;/p&gt;
-&lt;h3 id=&#34;startup&#34;&gt;Startup&lt;/h3&gt;
-&lt;p&gt;启动是最复杂的。作为一个要兜底的进程，需要考虑到各种婆婆妈妈的情况。&lt;/p&gt;
-&lt;p&gt;在代码里写死的启动项目，叫&lt;code&gt;SPECIAL_DEFAULT_TARGET &amp;quot;default.target&amp;quot;&lt;/code&gt;。之后之所以能带动起到了的各种unit的启动，是因为有systemd的unit加载启动机制。还好项目的代码写的很明了，对于启动需要关注一个函数就行：&lt;code&gt;manager_startup&lt;/code&gt;。&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;找到default.target在哪里，这里的寻找过程就奠定了使用时该怎么找启动文件，很冗长也很无聊的代码&lt;/li&gt;
-&lt;li&gt;systemd也支持旧式的initrc脚本，总要有个识别旧式启动方式的过程，所以接下来就是这个识别并收为己用的过程。systemd把这个过程命名为generator。&lt;/li&gt;
-&lt;li&gt;接下来的过程叫做&lt;code&gt;enumerate_perpetual/enumerate&lt;/code&gt;，用于一些mount的对象，可以发现当前系统里存在的设备。&lt;/li&gt;
-&lt;li&gt;dbus也要在这个时候做好准备。&lt;/li&gt;
-&lt;li&gt;把&lt;code&gt;SPECIAL_DEFAULT_TARGET&lt;/code&gt;加入到load queue中。这个算是比较标志性的一个点了。可以说systemd真正的启动过程就是从这里来的。关键函数是&lt;code&gt;do_queue_default_job&lt;/code&gt;。&lt;/li&gt;
-&lt;li&gt;进入&lt;code&gt;sd-event&lt;/code&gt;的循环，正式开始上班。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h4 id=&#34;do_queue_default_job&#34;&gt;&lt;code&gt;do_queue_default_job&lt;/code&gt;&lt;/h4&gt;
-&lt;p&gt;把default.target加载到内存里，并连带依赖一起加载的工作是在&lt;code&gt;manager_load_startable_unit_or_warn&lt;/code&gt;中进行的。这里比较关键的接口是&lt;code&gt;manager_load_unit&lt;/code&gt;。这里分2步走&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;&lt;code&gt;manager_load_unit_prepare&lt;/code&gt; : 找到这个目的unit，初始化，然后加入到manager的load_queue中。&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;manager_dispatch_load_queue&lt;/code&gt; : 循环加载就在这个里面实现。里面有一个while，从&lt;code&gt;m-&amp;gt;load_queue&lt;/code&gt;中不断取unit来加载。虽然刚开始只加入了一个default.target，但是加载default.target的时候会不断的把所依赖的unit插入到&lt;code&gt;m-&amp;gt;load_queue&lt;/code&gt;之中。循环往复，直到所有依赖都加载完成。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;这时这些unit终于从文件变成了内存的结构，准备工作完成。接下来启动的工作由&lt;code&gt;manager_add_job&lt;/code&gt;完成。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-c&#34; data-lang=&#34;c&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;int&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;manager_add_job&lt;/span&gt;(
-                Manager &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;m,
-                JobType type,
-                Unit &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;unit,
-                JobMode mode,
-                Set &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;affected_jobs,
-                sd_bus_error &lt;span style=&#34;color:#f92672&#34;&gt;*&lt;/span&gt;error,
-                Job &lt;span style=&#34;color:#f92672&#34;&gt;**&lt;/span&gt;ret)
-
-r &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; manager_add_job(m, JOB_START, target, JOB_ISOLATE, NULL, &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;error, &lt;span style=&#34;color:#f92672&#34;&gt;&amp;amp;&lt;/span&gt;job);
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;看签名的话，&lt;code&gt;manager_add_job&lt;/code&gt;会返回一个job给我们，但是job却不是这个函数里分配的。函数里用了一个临时的Transaction来处理依赖，在transaction里有一个&lt;code&gt;anchor_job&lt;/code&gt;，就是我们所请求的起始job。函数最终返回的就是这个&lt;code&gt;anchor_job&lt;/code&gt;。&lt;/p&gt;</description>
+      <guid>https://ivkus.github.io/docs/osc/systemd_read/</guid>
+      <description>&lt;p&gt;Systemd的争议挺大的，不来看看大家为什么抵制它吗？&lt;/p&gt;</description>
     </item>
     
   </channel>

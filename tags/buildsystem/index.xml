@@ -3,163 +3,21 @@
   <channel>
     <title>buildsystem on 存留处</title>
     <link>https://ivkus.github.io/tags/buildsystem/</link>
-    <description>存留处 (buildsystem)</description>
+    <description>Recent content in buildsystem on 存留处</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
     <lastBuildDate>Fri, 26 Jul 2019 23:26:57 +0800</lastBuildDate>
     
-    <atom:link href="https://ivkus.github.io/tags/buildsystem/index.xml" rel="self" type="application/rss+xml" />
+	<atom:link href="https://ivkus.github.io/tags/buildsystem/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Waf - a Python based build system</title>
-      <link>https://ivkus.github.io/posts/osc/waf/</link>
+      <link>https://ivkus.github.io/docs/osc/waf/</link>
       <pubDate>Fri, 26 Jul 2019 23:26:57 +0800</pubDate>
       
-      <guid>https://ivkus.github.io/posts/osc/waf/</guid>
-      <description>&lt;p&gt;看懂这篇文章需要一点使用waf的经验，不过也不费事，看看例子也够了。&lt;/p&gt;
-&lt;h1 id=&#34;构建系统简谈&#34;&gt;构建系统简谈&lt;/h1&gt;
-&lt;p&gt;软件构建系统不像是个很多人在研究的东西，所以在网络上很少能找到剖析某个构建系统原理、或者阐述构建系统principle的文章。看ns3的过程中接触到了waf，发现其文档&lt;a href=&#34;https://waf.io/book/&#34;&gt;waf book&lt;/a&gt;很好的阐述了构建系统的一些基础知识，个人认为比cmake的文档好一些。因为其核心只有十几个文件，这个构建系统只需要一个10k+的waf文件，所以可以放到版本库里（像对python的评价一样，batteries included），唯一要求就是环境中有python，而这对一个开发人员来说显然不是一件困难的事情。&lt;/p&gt;
-&lt;pre&gt;&lt;code&gt;|-- Build.py
-|-- ConfigSet.py
-|-- Configure.py
-|-- Context.py
-|-- Errors.py
-|-- Logs.py
-|-- Node.py
-|-- Options.py
-|-- Runner.py
-|-- Scripting.py
-|-- Task.py
-|-- TaskGen.py
-|-- Tools [directory]
-|-- Utils.py
-|-- ansiterm.py
-|-- extras
-|-- fixpy2.py
-`-- processor.py
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;以上便是所有waf的内容，可以看到涉及到的文件不算多。Tools下包含了很多语言的构建工具，比如c/c++/java/qt/ruby/tex等等，如果自己有能力定制，可以只保留自己项目里需要的tool，可以做到更小。（虽然个人认为没有必要）&lt;/p&gt;
-&lt;h1 id=&#34;核心抽象&#34;&gt;核心抽象&lt;/h1&gt;
-&lt;p&gt;如果是写编译语言的(c/c++/rust/go/fc/d)，那么构建系统是每天都在用的。在敲击make&lt;!-- raw HTML omitted --&gt;之后，屏幕上出现了一系列的自动运行的命令，然后就是漫长的等待。用waf也一样，一般是./waf configure build clean dist&amp;hellip;再等机器的轰鸣停止后继续工作流。waf提供了一些核心的抽象，从而能够表达出构建这个活动的几个关键方面：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;像make clean dist类似，可以在构建命令后面自行添加指令，这种capibility由Context提供&lt;/li&gt;
-&lt;li&gt;构建系统最重要的功能就是按需构建，要判断出哪些文件要编译而哪些是不用的，这用到了TaskGen与Task的抽象&lt;/li&gt;
-&lt;li&gt;并行构建提升速度，由Runner来提供。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;这3个抽象几乎相互独立，个人认为是很好的一个抽象。&lt;/p&gt;
-&lt;h2 id=&#34;context&#34;&gt;Context&lt;/h2&gt;
-&lt;p&gt;每一个跟在./waf后面的指令，都对应一个Context。如果是&lt;code&gt;build/configure/list/step/install/uninstall&lt;/code&gt;，waf自行提供了对应的Context的子类用于执行这些命令，如果是其他的自定义函数，那么就会依托于Context本身，可以在自定义函数里用Context自定义的函数，比如recurse来遍历子目录执行子目录里的同名自定义函数。&lt;/p&gt;
-&lt;p&gt;如果项目根目录下的&lt;code&gt;wscript&lt;/code&gt;有do_sth，就可以./waf do_sth&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;do_sth&lt;/span&gt;(ctx):
-    ctx&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;load(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;compiler_cxx&amp;#39;&lt;/span&gt;)    &lt;span style=&#34;color:#75715e&#34;&gt;# 加载工具&lt;/span&gt;
-    ctx&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;recurse([&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;src&amp;#39;&lt;/span&gt;,&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;dep&amp;#39;&lt;/span&gt;])  &lt;span style=&#34;color:#75715e&#34;&gt;# 遍历子目录，执行子目录下wscript里的do_sth&lt;/span&gt;
-    ctx&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;exec_command(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;touch foo.txt&amp;#39;&lt;/span&gt;)
-    ctx&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;msg(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;hello&amp;#39;&lt;/span&gt;)
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这里函数参数ctx就是指向了Context的一个实例，而do_sth是作为Context上的一个方法而存在的，可以直观的理解为，我们为Context增加了一个自定义的do_sth方法，所以可以自由调用Context里本来提供的方法。&lt;/p&gt;
-&lt;p&gt;./waf build执行时绑定的Context是BuildConetxt，在Build.py里被定义，在waf build的时候，执行的是wscript里&lt;code&gt;def build(bld)&lt;/code&gt;这个方法。举一个例子&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;configure&lt;/span&gt;(conf):
-    conf&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;load(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;compiler_cxx&amp;#39;&lt;/span&gt;)
-&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;build&lt;/span&gt;(bld):
-    bld&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;shlib(source&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;a.cpp&amp;#39;&lt;/span&gt;, target&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;mylib3&amp;#39;&lt;/span&gt;)
-    bld&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;program(source&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;main.cpp&amp;#39;&lt;/span&gt;, target&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;app&amp;#39;&lt;/span&gt;, use&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;mylib&amp;#39;&lt;/span&gt;)
-    bld&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;stlib(target&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;foo&amp;#39;&lt;/span&gt;, source&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;b.cpp&amp;#39;&lt;/span&gt;)
-    &lt;span style=&#34;color:#75715e&#34;&gt;# 直接调用bld&lt;/span&gt;
-    bld(features &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;c cprogram glib2&amp;#39;&lt;/span&gt;,
-        use      &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;GLIB GIO GOBJECT&amp;#39;&lt;/span&gt;,
-        source   &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;main.c org.glib2.test.gresource.xml&amp;#39;&lt;/span&gt;,
-        target   &lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt; &lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;gsettings-test&amp;#39;&lt;/span&gt;)
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这里bld指向了BuildContext的一个实例，这意味着BuildContext里所有的方法都在这个函数里都是可用的，可以通过&lt;code&gt;bld.xxx&lt;/code&gt;来调用。&lt;/p&gt;
-&lt;p&gt;值得注意的是，在Build.py中，可是找不到&lt;code&gt;shlib/probram/stlib&lt;/code&gt;这3个方法的，但是在这里却调用成功没有报错，这全部依赖于&lt;code&gt;conf.load(&#39;compiler_cxx&#39;)&lt;/code&gt;这一句。执行这句话后，就给bld指向的BuildContext实例绑定了&lt;code&gt;shlib/program/stlib&lt;/code&gt;这3个方法。
-那直接调用&lt;code&gt;bld()&lt;/code&gt;呢？这个就要看Build.py里的&lt;code&gt;BuildContex():__call__&lt;/code&gt;方法了。从这里开始，就涉及到&lt;code&gt;TaskGen&lt;/code&gt;这个抽象了。&lt;/p&gt;
-&lt;h2 id=&#34;taskgen--task&#34;&gt;TaskGen &amp;amp; Task&lt;/h2&gt;
-&lt;p&gt;最终需要执行的编译指令、中间代码生成等，每一条都对应一个task，我们不可能去一个一个的写task，而是希望以一种声明式的方法表达想要做的事情，这就是task_gen所完成的任务。从声明式表达到生成task的这项任务，由waf build完成。在执行的过程中，会对搜集到的每个task_gen执行一下post()，然后这个task_gen就生成了自己所有的task。作为一个灵活的构建系统，waf提供了很多方法来让我们hook到post()的过程中。对于每个task，到底该不该执行需不需要执行，它自己会追踪自己的依赖，职责分离，我很喜欢这个设计思路。&lt;/p&gt;
-&lt;p&gt;以前一小节为例，共在build(bld)里一共进行了4次调用，这意味着生成了4个task_gen的实例，在真正执行构建过程之前，会有一个地方对这4个实例各自调用一下post()，把所有的task_gen都消灭掉，变成task。至于怎么hook，这是个比较关键的点，如果理解了，就能很好的自定义waf了。&lt;/p&gt;
-&lt;p&gt;首先看看写好的wscript，它的声明式体现在什么地方呢？体现在函数参数里。得益于python的语言特点，可以随便加参数，然后在函数实现里用**kw来取这些值。这意味着可以随便加自己想要的key=value进去，这些加进去的参数是可以在自定义的hook过程中取到的，这算是可自定义的一个基础。（ruby自定义的能力更强，毕竟dsl是其强项，但可能限于ruby的流行程度以及发行版是否默认安装，让作者最后选择了python，不过也已经够用了）&lt;/p&gt;
-&lt;p&gt;在post()的过程中，会从&lt;code&gt;task_gen.meths[]&lt;/code&gt;里依次取出方法来执行，hook的方式就是把自定义的方法塞到这个&lt;code&gt;task_gen.meths[]&lt;/code&gt;之中。这只要在自定义的方法上加一个&lt;code&gt;@TaskGen.taskgen_method&lt;/code&gt;的注解就能实现，还是挺简洁的吧？声明式中写的key=val,都能通过taskgen.key取到，这样一来，几乎就获得了无限的能力来自定义构建过程了。&lt;/p&gt;
-&lt;p&gt;在&lt;code&gt;taskgen.meths[]&lt;/code&gt;里有几项预定义的方法，waf也提供了指令来让我们定制自己方法执行的位置。总而言之，想要什么内容，直接在wscript里以key=val的方式指定，然后在自己的方法里用getattr来取就行了。&lt;/p&gt;
-&lt;p&gt;这也只是个支持性框架，具体到某个语言(c/c++)是怎么做的，到后面再看。&lt;/p&gt;
-&lt;h2 id=&#34;runner&#34;&gt;Runner&lt;/h2&gt;
-&lt;p&gt;waf自己会默认起和cpu core相同数量的进程来执行构建认任务，而且构建过程的输出也很清晰漂亮。waf也提供了lazy的模式，不是一下子把所有的task_gen都转化，所以也是用了一些技巧来达成这个目的。在看waf代码的过程中，能看到很多pythonic和近乎炫技的技法，可见作者真是把python语言玩弄于股掌之中。&lt;/p&gt;
-&lt;p&gt;如何实现&lt;code&gt;make -j&lt;/code&gt;的效果？答案是&lt;code&gt;Semphore&lt;/code&gt;，这里的job control是由几个类相互交互完成的。虽说Python的线程是鸡肋，但完成任务分派还是绰绰有余。这里分三类线程：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;主线程，只有1个，即敲回车后生成的Python进程，其中负责交互的类为&lt;code&gt;Parallel&lt;/code&gt;。&lt;/li&gt;
-&lt;li&gt;分派线程，也只有1个，叫&lt;code&gt;Spawner&lt;/code&gt;，与&lt;code&gt;Parallel&lt;/code&gt;互相引用。主线程决定了并行数量，然后在分派线程里初始化一个对应数量的&lt;code&gt;Semphore&lt;/code&gt;。&lt;/li&gt;
-&lt;li&gt;工作线程&lt;code&gt;Consumer&lt;/code&gt;，有一个&lt;code&gt;Task&lt;/code&gt;，就得起1个&lt;code&gt;Consumer&lt;/code&gt;&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;其实到现在的位置，要执行的&lt;code&gt;Task&lt;/code&gt;已经都放在一个队列&lt;code&gt;ready&lt;/code&gt;里了。遍历这个队列，acquire semphore，开新的&lt;code&gt;Consume&lt;/code&gt;执行&lt;code&gt;Task&lt;/code&gt;。如果&lt;code&gt;Semphore&lt;/code&gt;用完了，那么遍历的过程就阻塞，直到&lt;code&gt;Task&lt;/code&gt;执行结束后&lt;code&gt;Consumer&lt;/code&gt;再把这个&lt;code&gt;Semphore&lt;/code&gt;加回去。&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;Consume&lt;/code&gt;从&lt;code&gt;ready&lt;/code&gt;队列里获取任务执行，结束后放回&lt;code&gt;out&lt;/code&gt;队列里。主线程在一个循环里从&lt;code&gt;out&lt;/code&gt;往回拿任务，看看对不对，然后做一些统计或者直接结束构建。&lt;/p&gt;
-&lt;p&gt;这里提到的所有类，都在Runner.py里。&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;Consumer&lt;/code&gt;里调用的方法最后都会走到Utils.run_regular_process里，通过subprocess.Popen来完成真正的命令调用。&lt;/p&gt;
-&lt;h1 id=&#34;c的构建&#34;&gt;C++的构建&lt;/h1&gt;
-&lt;p&gt;前面的核心抽象确实相当抽象，只是提供了一种框架来执行并行执行一些任务，关于构建本身则没有任何的提及。至于如何用这种工具做到构建C++工程，则并不是一件容易的事情。&lt;/p&gt;
-&lt;p&gt;cmake社区近些年发起了轰轰烈烈的modern cmake的运动，即迁移到target based的构建描述，而非原先支持的流水帐构建。反观waf自带的C++构建方式，天然就是target based，只不过在waf的范畴里，这个叫task generator。&lt;/p&gt;
-&lt;p&gt;C++代码最终的产出是什么呢？有3种：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;可执行程序&lt;/li&gt;
-&lt;li&gt;静态库&lt;/li&gt;
-&lt;li&gt;动态库&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;有的C++程序其实是作为其他程序的依赖而存在，典型的比如各种libssl-dev。这种类型的产出不仅只有可加载的二进制，而且还要给其他库提供编译支持，即头文件。&lt;/p&gt;
-&lt;p&gt;有人喜欢写all in one的代码，典型的比如Fabrice Bellard写quickjs，一个文件搞定。这种代码，其实并不太需要构建系统，几行shell脚本就全都搞定，反正每次都要重新编译。不过普通人还是选普通配置，该分模块就分模块，老老实实的一个一个module去完成功能。减少构建的时间，减少重复编译的工作，这就需要构建系统的辅助，来找出哪些需要重新编译而那些可以复用。&lt;/p&gt;
-&lt;p&gt;可以从2个角度来思考C++的构建&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;找出来哪些需要重新构建，这个工作叫依赖管理&lt;/li&gt;
-&lt;li&gt;每个构建应该怎么完成&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;以如下的构建脚本为例吧。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;build&lt;/span&gt;(bld):
-	bld&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;shlib(source&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;a.cpp b.cpp&amp;#39;&lt;/span&gt;, target&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;mylib&amp;#39;&lt;/span&gt;)
-	bld&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;program(source&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;main.cpp&amp;#39;&lt;/span&gt;, target&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;app&amp;#39;&lt;/span&gt;, use&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;mylib&amp;#39;&lt;/span&gt;)
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这里申明了一个动态库&lt;code&gt;mylib&lt;/code&gt;，由2个文件构建而成；然后申明了一个二进制的程序&lt;code&gt;app&lt;/code&gt;，用到了&lt;code&gt;mylib&lt;/code&gt;。
-我们用手工编译的话，需要如下的步骤：&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;$ g++ -c a.cpp -o a.o
-$ g++ -c b.cpp -o b.o
-$ g++ --shared a.o b.o -o mylib.so
-$ g++ -c main.cpp -o main.o
-$ g++ main.o -o app -lmylib
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;其中每一行就是一个task，那么如何从build里的那几句话得到这些task呢？说来话长，要用到waf提供的一系列脚手架，就一个一个慢慢来吧！&lt;/p&gt;
-&lt;h2 id=&#34;task-generator解构&#34;&gt;Task Generator解构&lt;/h2&gt;
-&lt;p&gt;这两次对bld.xxx的调用，生成了2个task generator，之后task_gen经过一系列的处理，生成了5个task。
-不过，task generator到底是什么？看看文档里的说法吧！&lt;/p&gt;
-&lt;blockquote&gt;
-&lt;p&gt;task generator应当有如下的特征&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;attribute(就是bld.shlib、bld.program的入参)仅在需要处理的时候才处理&lt;/li&gt;
-&lt;li&gt;对attribute的存在性不做要求&lt;/li&gt;
-&lt;li&gt;可以根据单个task generator来对构建过程做出调整&lt;/li&gt;
-&lt;li&gt;应该提供与插件结合的能力&lt;/li&gt;
-&lt;/ol&gt;
-&lt;/blockquote&gt;
-&lt;p&gt;所以，实现这样的一个功能还是挺难的，文档里列举了这么一些方式：&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;用类来抽象task generator，通过继承的方式来解决添加功能的问题&lt;/li&gt;
-&lt;li&gt;用python decorator来添加新功能，不过这种方式只能达到添加的功能，没办法删除已有的功能&lt;/li&gt;
-&lt;li&gt;扁平化的方式，只声明自己功能执行的时候需要满足的条件，就像面向切片编程一样。&lt;/li&gt;
-&lt;/ol&gt;
-&lt;p&gt;第3个看起来不错，不如看看是怎么实现的吧。&lt;/p&gt;
-&lt;p&gt;要产出task，那么最开始的方法是什么？是&lt;code&gt;task_gen.post()&lt;/code&gt;，在BuildContext里被调用。这个方法其实只做了一件事情：根据设置的feature，填充task_gen.meths，处理一下里面顺序，然后挨个调用就行。&lt;/p&gt;
-&lt;p&gt;那么就很明显了，对于所有的task generator，都有一个feature是&lt;code&gt;*&lt;/code&gt;，而与&lt;code&gt;*&lt;/code&gt;相互关联的方法只有2个:&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;@feature&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;*&amp;#39;&lt;/span&gt;)
-&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;process_source&lt;/span&gt;(self):
-    &lt;span style=&#34;color:#f92672&#34;&gt;...&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;处理&lt;/span&gt;bld&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;xyz(source&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;a.c b.py c.tex&amp;#39;&lt;/span&gt;)&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;的&lt;/span&gt;source
-
-&lt;span style=&#34;color:#a6e22e&#34;&gt;@feature&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;*&amp;#39;&lt;/span&gt;)
-&lt;span style=&#34;color:#a6e22e&#34;&gt;@before_method&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;process_source&amp;#39;&lt;/span&gt;)
-&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;process_rule&lt;/span&gt;(self):
-    &lt;span style=&#34;color:#f92672&#34;&gt;...&lt;/span&gt;&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;处理&lt;/span&gt;bld&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;xyz(rule&lt;span style=&#34;color:#f92672&#34;&gt;=&lt;/span&gt;&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;cp SRC[0] TGT[0]&amp;#39;&lt;/span&gt;)&lt;span style=&#34;color:#960050;background-color:#1e0010&#34;&gt;的&lt;/span&gt;rule
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;这就是waf所有魔法的起点。有了这2个方法，好像就有了锚点一样，如果有自己的功能想要添加，就用&lt;code&gt;@feature&lt;/code&gt;加上去，如果想要调整顺序，还有&lt;code&gt;@before_method\@after_method&lt;/code&gt;。&lt;/p&gt;
-&lt;h2 id=&#34;extension-mapping&#34;&gt;extension mapping&lt;/h2&gt;
-&lt;p&gt;在C++构建中，光有这些方法，离生成可用的task好像还有点远。其实并不远，只是需要明确到底是在哪一步hook进去的，这步就是前面提到的&lt;code&gt;process_source&lt;/code&gt;。&lt;/p&gt;
-&lt;p&gt;在&lt;code&gt;process_source&lt;/code&gt;里，对source这个attribute里的每一个文件，都通过其后缀找到对应的处理函数并执行。c/c++代码的后缀无非就是c/cc/cxx/cpp/h/hpp/hxx之类的，这些waf自带的tool就已经把这些常用的都包含进去了。&lt;/p&gt;
-&lt;p&gt;是不是有种，你以为我在第二层，其实我在第五层的感觉？实话说这就是我自己在追逻辑时候的感觉。如果feature是第一层，那么feature塞function到task_gen.meths里就是第二层；第二层提供了的一个方法&lt;code&gt;process_source&lt;/code&gt;是第三层，&lt;code&gt;process_source&lt;/code&gt;自己又提供了extension mapping，这就是第四层；对应到每一个extension，就可以到各自的构建过程了，这也是提供给其他的插件的hook点。&lt;/p&gt;
-&lt;p&gt;真真儿的，有5层。&lt;/p&gt;
-&lt;div class=&#34;highlight&#34;&gt;&lt;pre style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4&#34;&gt;&lt;code class=&#34;language-python&#34; data-lang=&#34;python&#34;&gt;&lt;span style=&#34;color:#a6e22e&#34;&gt;@TaskGen.extension&lt;/span&gt;(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.cpp&amp;#39;&lt;/span&gt;,&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.cc&amp;#39;&lt;/span&gt;,&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.cxx&amp;#39;&lt;/span&gt;,&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.C&amp;#39;&lt;/span&gt;,&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;.c++&amp;#39;&lt;/span&gt;)
-&lt;span style=&#34;color:#66d9ef&#34;&gt;def&lt;/span&gt; &lt;span style=&#34;color:#a6e22e&#34;&gt;cxx_hook&lt;/span&gt;(self, node):
-	&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#34;Binds c++ file extensions to create :py:class:`waflib.Tools.cxx.cxx` instances&amp;#34;&lt;/span&gt;
-	&lt;span style=&#34;color:#66d9ef&#34;&gt;return&lt;/span&gt; self&lt;span style=&#34;color:#f92672&#34;&gt;.&lt;/span&gt;create_compiled_task(&lt;span style=&#34;color:#e6db74&#34;&gt;&amp;#39;cxx&amp;#39;&lt;/span&gt;, node)
-&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;p&gt;看函数名就知道了，这里就是task真正产生的地方！&lt;/p&gt;
-&lt;h1 id=&#34;后记&#34;&gt;后记&lt;/h1&gt;
-&lt;p&gt;其实也不能完全算看完吧，还有很多具体的细节没有提到，典型的比如变动检测（用md5而没用update time，并且联系到一个动态ID上），动态编译build function（把run_str变成一个task的方法，执行这个方法调用subprocess.Popen），以及其他种种；不过已经可以稍微帮助别人理解一下这个构建工具的基本思想，以及一个稍微具体的实例来体会构建过程，希望能起到一点抛砖引玉的作用。&lt;/p&gt;</description>
+      <guid>https://ivkus.github.io/docs/osc/waf/</guid>
+      <description>&lt;p&gt;看懂这篇文章需要一点使用waf的经验，不过也不费事，看看例子也够了。&lt;/p&gt;</description>
     </item>
     
   </channel>
