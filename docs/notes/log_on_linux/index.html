@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="
+简单回顾一些Linux上日志系统的一些背景，并配置一个rsyslog的日志结构化落db的系统。
+">
+<meta name="theme-color" content="#FFFFFF">
+<meta name="color-scheme" content="light dark"><meta property="og:title" content="Logging On Linux" />
+<meta property="og:description" content="
+简单回顾一些Linux上日志系统的一些背景，并配置一个rsyslog的日志结构化落db的系统。
+" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ivkus.github.io/docs/notes/log_on_linux/" />
+<meta property="article:published_time" content="2022-05-31T23:26:20+08:00" />
+<meta property="article:modified_time" content="2022-05-31T23:26:20+08:00" />
+<title>Logging On Linux | 存留处</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/favicon.png" type="image/x-icon">
+<link rel="stylesheet" href="/book.min.da110f27d6a4d632dc8e162876b7216c5c1f82164fbdac7ff33021633767f034.css" integrity="sha256-2hEPJ9ak1jLcjhYodrchbFwfghZPvax/8zAhYzdn8DQ=" crossorigin="anonymous">
+  <script defer src="/flexsearch.min.js"></script>
+  <script defer src="/en.search.min.6863057d376d605d24d9c5736ed197cc8aa77ec89e2048e987dc9873fa85a889.js" integrity="sha256-aGMFfTdtYF0k2cVzbtGXzIqnfsieIEjph9yYc/qFqIk=" crossorigin="anonymous"></script>
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>存留处</span>
+  </a>
+</h2>
+
+
+<div class="book-search">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/notes/log_on_linux/" class="active">Logging On Linux</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/cpp/traits/" class="">【翻译】Traits:一种新的而且有用的Template技巧</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/cpp/cpp_emptyclass_opt/" class="">【翻译】c&#43;&#43;类中“空成员”的优化</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/osc/systemd_read/" class="">Systemd阅读笔记</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/myth/thinking_in_multithread/" class="">多线程交互的思考</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/osc/waf/" class="">Waf - a Python based build system</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/osc/ns3_typeid/" class="">TypeId in NS3</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var menu=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(event){localStorage.setItem("menu.scrollTop",menu.scrollTop);});menu.scrollTop=localStorage.getItem("menu.scrollTop");})();</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <strong>Logging On Linux</strong>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#背景">背景</a>
+      <ul>
+        <li><a href="#syslog-系syslog-rsyslog-or-syslog-ng">syslog 系：syslog-&gt;rsyslog or syslog-ng</a>
+          <ul>
+            <li><a href="#日志格式">日志格式</a></li>
+            <li><a href="#进阶功能">进阶功能</a></li>
+          </ul>
+        </li>
+        <li><a href="#linux-系systemd-journald">linux 系：systemd-journald</a>
+          <ul>
+            <li><a href="#进阶功能-1">进阶功能</a></li>
+          </ul>
+        </li>
+        <li><a href="#elklogstashfilebeat">elk：logstash+filebeat</a>
+          <ul>
+            <li><a href="#进阶功能-2">进阶功能</a></li>
+          </ul>
+        </li>
+        <li><a href="#kernel-log">Kernel Log</a></li>
+      </ul>
+    </li>
+    <li><a href="#rsyslog-in-action">Rsyslog in action</a>
+      <ul>
+        <li><a href="#小目标">小目标</a></li>
+        <li><a href="#关联模块准备">关联模块准备</a></li>
+        <li><a href="#配置文件">配置文件</a></li>
+        <li><a href="#日志文件监听">日志文件监听</a></li>
+        <li><a href="#格式解析liblognorm">格式解析：liblognorm</a></li>
+        <li><a href="#输出到数据库">输出到数据库</a></li>
+        <li><a href="#排错指南">排错指南</a></li>
+      </ul>
+    </li>
+    <li><a href="#开发相关">开发相关</a>
+      <ul>
+        <li><a href="#glibc-里-syslog-相关的实现">glibc 里 syslog 相关的实现</a></li>
+        <li><a href="#systemd-service">systemd service</a></li>
+        <li><a href="#sd-journal">sd-journal</a></li>
+        <li><a href="#如何用到实际项目里">如何用到实际项目里</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+  <article class="markdown"><blockquote>
+<p>简单回顾一些Linux上日志系统的一些背景，并配置一个rsyslog的日志结构化落db的系统。</p>
+</blockquote>
+<h1 id="背景">背景</h1>
+<p>push模型：应用程序自己主动推日志到消息系统</p>
+<p>pull模型：消息系统监控应用程序的日志，自己去query</p>
+<h2 id="syslog-系syslog-rsyslog-or-syslog-ng">syslog 系：syslog-&gt;rsyslog or syslog-ng</h2>
+<p>push 模型，监听/dev/log，收到的日志一般存放在/var/log 下面。配置在/etc/rsyslog.conf</p>
+<h3 id="日志格式">日志格式</h3>
+<p>有 2 个 rfc</p>
+<h4 id="rfc-3164-bsd-style">rfc 3164 BSD style</h4>
+<p>这个更简单一点，最大长度 1024</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">&lt;35&gt;Oct 12 22:14:15 client_machine su: &#39;su root&#39; failed for joe on /dev/pts/2
+</code></pre></div><table>
+<thead>
+<tr>
+<th align="left">field</th>
+<th align="left">explain</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">&lt;35&gt;</td>
+<td align="left">priority = facility + severity</td>
+</tr>
+<tr>
+<td align="left">Oct 12 22:14:15</td>
+<td align="left">日期 格式只能是这个</td>
+</tr>
+<tr>
+<td align="left">client_machine</td>
+<td align="left">主机名称、ip 地址</td>
+</tr>
+<tr>
+<td align="left">su:</td>
+<td align="left">tag，最多 32B，以[ : space 结束</td>
+</tr>
+<tr>
+<td align="left">&lsquo;su root&rsquo; fail。。。</td>
+<td align="left">消息正文</td>
+</tr>
+</tbody>
+</table>
+<h4 id="rfc-5424">rfc 5424</h4>
+<p>2009 年出的，最大长度 2048</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">&lt;34&gt;1 2003-10-11T22:14:15.003Z mymachine.example.com su - ID47 - BOM&#39;su root&#39; failed for lonvick on /dev/pts/8
+</code></pre></div><table>
+<thead>
+<tr>
+<th align="left">field</th>
+<th align="left">explain</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">&lt;34&gt;</td>
+<td align="left">pri</td>
+</tr>
+<tr>
+<td align="left">1</td>
+<td align="left">version</td>
+</tr>
+<tr>
+<td align="left">2003-10-11T22:14:15.003Z</td>
+<td align="left">时间</td>
+</tr>
+<tr>
+<td align="left">mymachine.example.com</td>
+<td align="left">机器</td>
+</tr>
+<tr>
+<td align="left">su</td>
+<td align="left">app name</td>
+</tr>
+<tr>
+<td align="left">-</td>
+<td align="left">应该是进程 pid</td>
+</tr>
+<tr>
+<td align="left">ID47</td>
+<td align="left">消息 ID</td>
+</tr>
+<tr>
+<td align="left">-</td>
+<td align="left">结构化数据</td>
+</tr>
+<tr>
+<td align="left">BOM&rsquo;su root&rsquo; failed for&hellip;</td>
+<td align="left">消息正文</td>
+</tr>
+</tbody>
+</table>
+<p>再来一个有结构化数据的例子</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">[exampleSDID@32473 iut=&#34;3&#34; eventSource=&#34;Application&#34; eventID=&#34;1011&#34;][examplePriority@32473 class=&#34;high&#34;][sigSig ver=&#34;1&#34; rsID=&#34;1234&#34; ... signature=&#34;...&#34;]
+</code></pre></div><p>格式就是这么个格式 &lsquo;exampleSDID@32473&rsquo; 是个 SD-ID，有一些标准化的 ID，比如这里的&rsquo;sigSig&rsquo;。</p>
+<h3 id="进阶功能">进阶功能</h3>
+<dl>
+<dt>接收（顾名思义）</dt>
+<dd><ul>
+<li>imudp</li>
+</ul>
+</dd>
+<dd><ul>
+<li>imtcp</li>
+</ul>
+</dd>
+<dd><ul>
+<li>imfile</li>
+</ul>
+</dd>
+<dt>处理</dt>
+<dd><ul>
+<li>mmjson rfc3164 的简单 json 格式化</li>
+</ul>
+</dd>
+<dd><ul>
+<li>mmnormalize 用 liblognorm 自定义解析规则，出来是个 json</li>
+</ul>
+</dd>
+<dt>输出（顾名思义）</dt>
+<dd><ul>
+<li>ommysql</li>
+</ul>
+</dd>
+<dd><ul>
+<li>omelastic</li>
+</ul>
+</dd>
+<dd><ul>
+<li>omfile</li>
+</ul>
+</dd>
+<dd><ul>
+<li>omkafka</li>
+</ul>
+</dd>
+<dd><ul>
+<li>omprog: 调用自定义的处理程序，用 stdin/stdout 处理</li>
+</ul>
+</dd>
+</dl>
+<h2 id="linux-系systemd-journald">linux 系：systemd-journald</h2>
+<p>push 模型，监听/run/system/journal/syslog，日志存放/var/log/journal，配置在/etc/systemd/journald.conf</p>
+<p>非明文存储，利于搜索。</p>
+<p>结构化消息，下划线开头是 journald 自己添加的消息。用 journalctl 读取。例子：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-plain" data-lang="plain">$ journalctl -n1 -o verbose
+-- Logs begin at Tue 2022-02-08 19:21:10 CST, end at Mon 2022-03-28 08:05:23 CST. --
+Mon 2022-03-28 08:05:23.517238 CST [s=5a9ef8f0b27749e8be1fb46418165a0c;i=1ccd;b=1c4958a7b26240628713f627042e87f8;m=f2d223e7b;t=5db3c119c1b36;x=fc7b3dd29adfe7b8]
+    PRIORITY=6
+    _UID=1000
+    _GID=1000
+    _CAP_EFFECTIVE=0
+    _AUDIT_SESSION=3
+    _AUDIT_LOGINUID=1000
+    _SYSTEMD_OWNER_UID=1000
+    _SYSTEMD_UNIT=user@1000.service
+    _SYSTEMD_SLICE=user-1000.slice
+    _SYSTEMD_USER_SLICE=-.slice
+    _BOOT_ID=1c4958a7b26240628713f627042e87f8
+    _MACHINE_ID=2ce2d4feff754f93ab21e7355f77e4c6
+    _HOSTNAME=ybaipc
+    _TRANSPORT=stdout
+    _COMM=chrome
+    _EXE=/snap/chromium/1945/usr/lib/chromium-browser/chrome
+    _SELINUX_CONTEXT=snap.chromium.chromium (enforce)
+    _SYSTEMD_CGROUP=/user.slice/user-1000.slice/user@1000.service/snap.chromium.chromium.990dd0f1-5415-48d7-b34d-0847ae198b0b.scope
+    _SYSTEMD_USER_UNIT=snap.chromium.chromium.990dd0f1-5415-48d7-b34d-0847ae198b0b.scope
+    _SYSTEMD_INVOCATION_ID=f24c28562e634bd98b4dcf7bbe178952
+    _STREAM_ID=c8846ca93bce46b7903aaa6881b310d9
+    SYSLOG_IDENTIFIER=chromium_chromium.desktop
+    _PID=8770
+    _CMDLINE=/snap/chromium/1945/usr/lib/chromium-browser/chrome --type=utility --utility-sub-type=network.mojom.NetworkService --lang=en-US --service-sandbox-type=none --change-stack-guard-on-fork=enable --shared-files=v8_context_sna&gt;
+    MESSAGE=[8770:8773:0328/080523.517107:ERROR:ssl_client_socket_impl.cc(995)] handshake failed; returned -1, SSL error code 1, net_error -101
+</code></pre></div><p>信息是真的很丰富了</p>
+<h3 id="进阶功能-1">进阶功能</h3>
+<p>journal的进程为system-journald.service</p>
+<p>这也可以配置日志转发，但这里叫systemd-journal-upload.service</p>
+<p>接收端是systemd-journal-remote.service</p>
+<p>还有个可以通过http进行日志记录的systemd-journal-gatewayd.service</p>
+<p>但是！：没有过滤！</p>
+<h2 id="elklogstashfilebeat">elk：logstash+filebeat</h2>
+<p>Pull 模型，日志系统主动拉取消息。</p>
+<p>本来是直接部署 logstash 的，但是资源占用堪忧（java 写的），现在直接部署 filebeat（golang 写的）只用作日志搜集。logstash 用作格式转换和 es 写入。</p>
+<p>存储一般就到了 elasticsearch 里，展示就用 kibana。</p>
+<h3 id="进阶功能-2">进阶功能</h3>
+<p>对接 elastic 的生态，尤其是各种日志生成的 visualize+dashboard</p>
+<p>以及监控，很大的可玩性</p>
+<p>就是有点费机器</p>
+<h2 id="kernel-log">Kernel Log</h2>
+<p>kernel的log是硬编码在内核里的一个ringbuffer的。一般发行版会起一个klogd的进程，不断的读取这个ringbuffer，然后发给syslogd。syslogd把消息再存到磁盘上。</p>
+<p>kernel的log一般就是printk出来的。</p>
+<p>用户空间和kernel的log相关的系统调用就2个</p>
+<ul>
+<li>syslog（就叫这个，和glibc的syslog同名）</li>
+<li>klogctl</li>
+</ul>
+<h1 id="rsyslog-in-action">Rsyslog in action</h1>
+<p>rsyslog兼容通用的配置格式，也就是$ModLoad/$WorkDirectory这种美元符号开头的脚本式格式。但后续增添了Rainer Script（作者叫Rainer）的新型配置格式，还能混着用。我看了下代码，解析这块就是传统的flex+bison写的一个解析器。这个有明确的作用域，可以用花括号包起来，写复杂逻辑推荐用这个新的格式。</p>
+<h2 id="小目标">小目标</h2>
+<p>当前的某个应用里有不少流水数据，每次查询的时候需要登陆到机器上手动从日志中grep；难处在程序有几十个实例，分散在多台机器上，手动查找IP并一路cd的操作效率很低。现在希望可以将这些数据格式化的送入数据库中，后续就可以借助丰富的数据库前端或者各种BI（metabase之类）来进行查询。</p>
+<p>需要做的一些步骤</p>
+<ul>
+<li>监控日志文件: 自带模块 imfile</li>
+<li>日志提取与结构化: mmnormalize，利用liblognorm从消息中提取字段，规整化到json中，供后续步骤使用</li>
+<li>发送到数据库: ommysql模块可以提供支持，也有ommongo/omelastic等后端</li>
+</ul>
+<h2 id="关联模块准备">关联模块准备</h2>
+<p>数据库就MySQL了，默认这个已经足够了。</p>
+<p>Centos 7里默认的Rsyslog还是有点老，好在官网提供了最新的仓库，自己添加一个repo就能用（<a href="https://www.rsyslog.com/rhelcentos-rpms/">Install rsyslog on RHEL/CENTOS</a>）。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ yum install rsyslog-mmnormalize rsyslog-mysql
+</code></pre></div><h2 id="配置文件">配置文件</h2>
+<p>默认文件为<code>/etc/rsyslog.conf</code>，文件中大部分发行版默认配置一条<code>$IncludeConfig /etc/rsyslog.d/*.conf</code>，因此可以将自己的配置放在该目录下即可。这次的配置可以全部集中到<code>/etc/rsyslog.d/myconf.conf</code>中。</p>
+<p>全局使用的配置尽量放在<code>/etc/rsyslog.conf</code>，比如启用模块的指令，就需要放在文件的最开始。</p>
+<p>Rainer script中，作为key的名字大小写无关。</p>
+<pre><code class="language-conf" data-lang="conf"># /etc/rsyslog.conf
+module(load=&quot;imfile&quot;)
+module(load=&quot;mmnormalize&quot;)
+module(load=&quot;ommysql&quot;)
+</code></pre><pre><code class="language-conf" data-lang="conf"># /etc/rsyslog.d/myconf.conf
+input(
+    type=&quot;imfile&quot;
+    File=&quot;/tmp/mylog.txt&quot;
+    Tag=&quot;mylog:&quot;
+    RuleSet=&quot;rs_me&quot; # 绑定的ruleset
+)
+
+# 示例日志
+# 2021-12-13 12:12:12.132435,Quantity: 23
+template(name=&quot;tpl_biz&quot; type=&quot;string&quot; option.sql=&quot;on&quot;
+    string=&quot;insert into biz_table (created_at, quantity) values (\&quot;%$!gentime%\&quot;, \&quot;%$!quantity%\&quot;)&quot;)
+
+# 这2个template是等价的
+# template(name=&quot;tpl_biz&quot; type=&quot;list&quot;) {
+#     constant(value=&quot;insert into biz_table (quantity) values (&quot;)
+#     property(name=&quot;$!gentime&quot;)
+#     constant(value=&quot;, &quot;)
+#     property(name=&quot;$!quantity&quot;)
+#     constant(value=&quot;)&quot;)
+# }
+
+ruleset(name=&quot;rs_me&quot;) {
+    action(type=&quot;mmnormalize&quot;
+        rulebase=&quot;/etc/rsyslog.d/me.rulebase&quot;
+    )
+
+    if $!event.tags contains &quot;qty&quot; then { # 这里的tags是从rulebase里来的
+        action(type=&quot;ommysql&quot;
+            Template=&quot;tpl_biz&quot;
+            server=&quot;localhost&quot; serverport=&quot;3306&quot; db=&quot;Syslog&quot;
+            uid=&quot;aaa&quot; pwd=&quot;aaa&quot;
+        )
+    } else {
+        action(type=&quot;omfile&quot;
+            File=&quot;/tmp/me.out&quot;
+        )
+    }
+}
+</code></pre><h2 id="日志文件监听">日志文件监听</h2>
+<p>数据源需要用<code>input</code>来指明，<code>tag</code>属性是必需的。</p>
+<h2 id="格式解析liblognorm">格式解析：liblognorm</h2>
+<p>mmnormalize只是简单调用了一下<a href="https://www.liblognorm.com/files/manual/index.html">lognormalizer</a>的功能。lognormalizer可以先从shell里调用来确认自己写的规则是不是正确。</p>
+<p>举例，现在的rulebase是这样的</p>
+<pre><code class="language-conf" data-lang="conf"># me.rulebase
+rule=qty:%gentime:char-sep:,%,Quantity: %quantity:number%
+</code></pre><p>需要这样调用，默认输出是json，<code>-T</code>输出event.tags。</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-bash" data-lang="bash">$ echo <span style="color:#e6db74">&#39;2021-12-13 12:12:12.132435,Quantity: 23&#39;</span> | lognormalizer -r me.rulebase -T
+<span style="color:#f92672">{</span> <span style="color:#e6db74">&#34;quantity&#34;</span>: <span style="color:#e6db74">&#34;23&#34;</span>, <span style="color:#e6db74">&#34;gentime&#34;</span>: <span style="color:#e6db74">&#34;2021-12-13 12:12:12.132435&#34;</span>, <span style="color:#e6db74">&#34;event.tags&#34;</span>: <span style="color:#f92672">[</span> <span style="color:#e6db74">&#34;qty&#34;</span> <span style="color:#f92672">]</span> <span style="color:#f92672">}</span>
+</code></pre></div><p>格式解析的模块是<code>mmnormalize</code>，是绑定的ruleset:rs_me的一部分。</p>
+<p><strong>注意</strong>: 在centos7上默认的rsyslog版本，如果rule里的key是大写开头(quantity-&gt;Quantity)，有概率是没有办法在action的template里去到这个值。所以尽量把抽取出来的key按照全部小写命名。</p>
+<h2 id="输出到数据库">输出到数据库</h2>
+<dl>
+<dt>时间格式</dt>
+<dd><ul>
+<li>为了能直接送到db里，时间格式需要调整到MySQL直接识别的格式，也就是<code>YYYY-MM-DD hh:mm:ss[.fraction]</code></li>
+</ul>
+</dd>
+<dd><ul>
+<li>若可以直接调整代码是最好不过了</li>
+</ul>
+</dd>
+<dt>时间精度</dt>
+<dd><ul>
+<li>用<code>DATETIME(6)</code>来定义，可以精确到微妙(10^-6)。这里的6就是fraction。</li>
+</ul>
+</dd>
+</dl>
+<p>需要事先在db中新建一张表</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-sql" data-lang="sql"><span style="color:#66d9ef">CREATE</span> <span style="color:#66d9ef">TABLE</span> <span style="color:#f92672">`</span>biz_table<span style="color:#f92672">`</span> (
+  <span style="color:#f92672">`</span>id<span style="color:#f92672">`</span> bigint unsigned <span style="color:#66d9ef">NOT</span> <span style="color:#66d9ef">NULL</span> AUTO_INCREMENT,
+  <span style="color:#f92672">`</span>created_at<span style="color:#f92672">`</span> datetime(<span style="color:#ae81ff">6</span>) <span style="color:#66d9ef">DEFAULT</span> <span style="color:#66d9ef">NULL</span>,
+  <span style="color:#f92672">`</span>quantity<span style="color:#f92672">`</span> bigint <span style="color:#66d9ef">DEFAULT</span> <span style="color:#e6db74">&#39;0&#39;</span>,
+  <span style="color:#66d9ef">PRIMARY</span> <span style="color:#66d9ef">KEY</span> (<span style="color:#f92672">`</span>id<span style="color:#f92672">`</span>),
+);
+</code></pre></div><p>template里<code>option.sql=&quot;on&quot;</code>是必须的，可能是出于编译模板的需要。</p>
+<h2 id="排错指南">排错指南</h2>
+<ul>
+<li>rulebase需要事先在shell里验证好</li>
+<li>module的加载放在<code>/etc/rsyslog.conf</code>开头</li>
+<li>发行版默认是用的systemd，写好配置后用<code>systemctl restart rsyslog</code>重启，然后<code>systemctl status rsyslog</code>看下启动的输出。这个输出只有几行，如果出错的地方很多，可以用<code>journalctl -u syslog</code>调用默认pager（也就是less）看完整的启动日志。</li>
+</ul>
+<h1 id="开发相关">开发相关</h1>
+<p>不找依赖的话，估计现在没有开箱即用的 rfc5424。glibc 的 syslog 还是太弱了点。</p>
+<h2 id="glibc-里-syslog-相关的实现">glibc 里 syslog 相关的实现</h2>
+<p>openlog(tag, flag)</p>
+<p>closelog()</p>
+<p>syslog(level, fmt, &hellip;)</p>
+<p>代码在<code>glibc/misc/syslog.c</code>里，不复杂，但是只能 Log 到&rdquo;/dev/log&quot;里。不过倒是线程安全的。</p>
+<p>这个是符合 rfc3164 的</p>
+<h2 id="systemd-service">systemd service</h2>
+<p>如果包装成systemd service，用systemd接管程序的起停，那么自动获得送入journald的功能。</p>
+<h2 id="sd-journal">sd-journal</h2>
+<p>开发时依赖一个 systemd 的库 libsystemd-dev，运行时只需要一个libsystemd.so就行了。</p>
+<p><a href="http://0pointer.de/blog/projects/journal-submit.html">systemd for Developers III</a> （点进去看例子）</p>
+<p>只需要几个函数</p>
+<ul>
+<li>sd_journal_send 可自己添加kv</li>
+<li>sd_journal_print 类似 syslog</li>
+</ul>
+<h2 id="如何用到实际项目里">如何用到实际项目里</h2>
+<p>需要自己包装一个吗？</p>
+<p>push/pull区别在哪儿？</p>
+<ul>
+<li>开发、运维</li>
+<li>流量</li>
+<li>结构化在哪儿做（生产者机器还是集中消费的地方）</li>
+<li>日质数量 8020518这个巨无霸</li>
+</ul>
+<p>想法：日志记录时进行标准化的结构，直接落es库。</p>
+<p>落es之前的步骤如何选择？</p>
+<p>playground: agent &amp; matrix</p></article>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+</div>
+
+
+
+  <script>(function(){function select(element){const selection=window.getSelection();const range=document.createRange();range.selectNodeContents(element);selection.removeAllRanges();selection.addRange(range);}
+document.querySelectorAll("pre code").forEach(code=>{code.addEventListener("click",function(event){select(code.parentElement);if(navigator.clipboard){navigator.clipboard.writeText(code.parentElement.textContent);}});});})();</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#背景">背景</a>
+      <ul>
+        <li><a href="#syslog-系syslog-rsyslog-or-syslog-ng">syslog 系：syslog-&gt;rsyslog or syslog-ng</a>
+          <ul>
+            <li><a href="#日志格式">日志格式</a></li>
+            <li><a href="#进阶功能">进阶功能</a></li>
+          </ul>
+        </li>
+        <li><a href="#linux-系systemd-journald">linux 系：systemd-journald</a>
+          <ul>
+            <li><a href="#进阶功能-1">进阶功能</a></li>
+          </ul>
+        </li>
+        <li><a href="#elklogstashfilebeat">elk：logstash+filebeat</a>
+          <ul>
+            <li><a href="#进阶功能-2">进阶功能</a></li>
+          </ul>
+        </li>
+        <li><a href="#kernel-log">Kernel Log</a></li>
+      </ul>
+    </li>
+    <li><a href="#rsyslog-in-action">Rsyslog in action</a>
+      <ul>
+        <li><a href="#小目标">小目标</a></li>
+        <li><a href="#关联模块准备">关联模块准备</a></li>
+        <li><a href="#配置文件">配置文件</a></li>
+        <li><a href="#日志文件监听">日志文件监听</a></li>
+        <li><a href="#格式解析liblognorm">格式解析：liblognorm</a></li>
+        <li><a href="#输出到数据库">输出到数据库</a></li>
+        <li><a href="#排错指南">排错指南</a></li>
+      </ul>
+    </li>
+    <li><a href="#开发相关">开发相关</a>
+      <ul>
+        <li><a href="#glibc-里-syslog-相关的实现">glibc 里 syslog 相关的实现</a></li>
+        <li><a href="#systemd-service">systemd service</a></li>
+        <li><a href="#sd-journal">sd-journal</a></li>
+        <li><a href="#如何用到实际项目里">如何用到实际项目里</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+

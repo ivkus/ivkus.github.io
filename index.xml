@@ -12,6 +12,17 @@
     
     
     <item>
+      <title>Logging On Linux</title>
+      <link>https://ivkus.github.io/docs/notes/log_on_linux/</link>
+      <pubDate>Tue, 31 May 2022 23:26:20 +0800</pubDate>
+      
+      <guid>https://ivkus.github.io/docs/notes/log_on_linux/</guid>
+      <description>&lt;blockquote&gt;
+&lt;p&gt;简单回顾一些Linux上日志系统的一些背景，并配置一个rsyslog的日志结构化落db的系统。&lt;/p&gt;
+&lt;/blockquote&gt;</description>
+    </item>
+    
+    <item>
       <title>【翻译】Traits:一种新的而且有用的Template技巧</title>
       <link>https://ivkus.github.io/docs/cpp/traits/</link>
       <pubDate>Fri, 27 May 2022 10:15:38 +0800</pubDate>
