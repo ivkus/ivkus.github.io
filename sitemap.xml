@@ -3,7 +3,32 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>https://ivkus.github.io/</loc>
+    <lastmod>2022-07-10T22:58:05+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://ivkus.github.io/tags/cpp/</loc>
+    <lastmod>2022-07-10T22:58:05+08:00</lastmod>
+  </url>
+  
+  <url>
     <loc>https://ivkus.github.io/docs/</loc>
+    <lastmod>2022-07-10T22:58:05+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://ivkus.github.io/docs/osc/rxcpp/</loc>
+    <lastmod>2022-07-10T22:58:05+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://ivkus.github.io/tags/</loc>
+    <lastmod>2022-07-10T22:58:05+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://ivkus.github.io/tags/linux/</loc>
     <lastmod>2022-05-31T23:26:20+08:00</lastmod>
   </url>
   
@@ -18,23 +43,8 @@
   </url>
   
   <url>
-    <loc>https://ivkus.github.io/tags/cpp/</loc>
-    <lastmod>2022-05-26T18:36:33+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://ivkus.github.io/tags/</loc>
-    <lastmod>2022-05-26T18:36:33+08:00</lastmod>
-  </url>
-  
-  <url>
     <loc>https://ivkus.github.io/docs/cpp/cpp_emptyclass_opt/</loc>
     <lastmod>2022-05-26T18:36:33+08:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://ivkus.github.io/tags/linux/</loc>
-    <lastmod>2020-12-24T21:54:51+08:00</lastmod>
   </url>
   
   <url>
@@ -43,18 +53,18 @@
   </url>
   
   <url>
-    <loc>https://ivkus.github.io/</loc>
-    <lastmod>2020-03-22T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>https://ivkus.github.io/about/</loc>
-    <lastmod>2020-03-22T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
     <loc>https://ivkus.github.io/docs/myth/thinking_in_multithread/</loc>
     <lastmod>2020-03-21T21:41:48+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://ivkus.github.io/tags/asio/</loc>
+    <lastmod>2020-01-20T22:58:05+08:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>https://ivkus.github.io/docs/cpp/asio/</loc>
+    <lastmod>2020-01-20T22:58:05+08:00</lastmod>
   </url>
   
   <url>

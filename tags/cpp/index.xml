@@ -6,10 +6,35 @@
     <description>Recent content in cpp on 存留处</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Thu, 26 May 2022 18:36:33 +0800</lastBuildDate>
+    <lastBuildDate>Sun, 10 Jul 2022 22:58:05 +0800</lastBuildDate>
     
 	<atom:link href="https://ivkus.github.io/tags/cpp/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>RxCpp</title>
+      <link>https://ivkus.github.io/docs/osc/rxcpp/</link>
+      <pubDate>Sun, 10 Jul 2022 22:58:05 +0800</pubDate>
+      
+      <guid>https://ivkus.github.io/docs/osc/rxcpp/</guid>
+      <description>&lt;p&gt;Reactive Programming似乎是已经过时了。&lt;/p&gt;
+&lt;p&gt;初次接触的时候是在快毕业的时候，大概2017年。那时RxJava/RxAndroid配合网络库来做一些很fancy的重试、消除重复点击之类的任务，可以把代码写的异常的优雅。当时实际的编码量和项目经验不足，理解起来稍微困难了点。现在工作中也有了可以抽象成&lt;code&gt;stream&lt;/code&gt;的场景，看看能不能把这个库看明白点用在工作中。&lt;/p&gt;
+&lt;p&gt;这里不会太关注rx的一些使用场景，更多关注一些稍微细节一些的实现，以帮助和梳理使用时对各个组件生命周期的把控。&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>【翻译】Traits:一种新的而且有用的Template技巧</title>
+      <link>https://ivkus.github.io/docs/cpp/traits/</link>
+      <pubDate>Fri, 27 May 2022 10:15:38 +0800</pubDate>
+      
+      <guid>https://ivkus.github.io/docs/cpp/traits/</guid>
+      <description>&lt;blockquote&gt;
+&lt;p&gt;文章来自&lt;a href=&#34;http://www.cantrip.org/traits.html&#34;&gt;Traits: a new and useful template technique&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;应该是很老(1995)的文章了，不过很适合作为Template入门的材料。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;ANSI/ISO C++标准库一开始就想支持国际化(internationalization)，虽然一开始还没相好具体细节，但是最近5年逐渐有点眉目了。现在得到的结论是，应当用template来对需要进行字符操作的工具进行参数化。&lt;/p&gt;
+&lt;p&gt;给现有的iostream和string类型进行参数化其实挺难的，需要发明一种新的技术才行。幸运的是，这种技术可以很好的服用在其他地方。&lt;/p&gt;</description>
+    </item>
     
     <item>
       <title>【翻译】c&#43;&#43;类中“空成员”的优化</title>
@@ -28,6 +53,15 @@
       
       <guid>https://ivkus.github.io/docs/myth/thinking_in_multithread/</guid>
       <description>&lt;p&gt;最近开始写多线程的程序，整理一下对多线程代码的思考。&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>ASIO阅读笔记</title>
+      <link>https://ivkus.github.io/docs/cpp/asio/</link>
+      <pubDate>Mon, 20 Jan 2020 22:58:05 +0800</pubDate>
+      
+      <guid>https://ivkus.github.io/docs/cpp/asio/</guid>
+      <description>&lt;p&gt;&lt;code&gt;ASIO&lt;/code&gt;或许是最知名的C++网络库了吧。&lt;/p&gt;</description>
     </item>
     
     <item>

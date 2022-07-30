@@ -9,13 +9,13 @@
 <meta property="og:description" content="" />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://ivkus.github.io/tags/cpp/" />
-<meta property="og:updated_time" content="2022-05-26T18:36:33+08:00" />
+<meta property="og:updated_time" content="2022-07-10T22:58:05+08:00" />
 <title>cpp | 存留处</title>
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/favicon.png" type="image/x-icon">
 <link rel="stylesheet" href="/book.min.da110f27d6a4d632dc8e162876b7216c5c1f82164fbdac7ff33021633767f034.css" integrity="sha256-2hEPJ9ak1jLcjhYodrchbFwfghZPvax/8zAhYzdn8DQ=" crossorigin="anonymous">
   <script defer src="/flexsearch.min.js"></script>
-  <script defer src="/en.search.min.ee537d2a41add02f3196f2c3813d9af8a63c329125819560f1f891a897b1a71a.js" integrity="sha256-7lN9KkGt0C8xlvLDgT2a&#43;KY8MpElgZVg8fiRqJexpxo=" crossorigin="anonymous"></script>
+  <script defer src="/en.search.min.0d6d49fe1f560163bb045c872146a7e43d193c4be43ffc9a57ab4cae76c399f4.js" integrity="sha256-DW1J/h9WAWO7BFyHIUan5D0ZPEvkP/yaV6tMrnbDmfQ=" crossorigin="anonymous"></script>
 <link rel="alternate" type="application/rss+xml" href="https://ivkus.github.io/tags/cpp/index.xml" title="存留处" />
 <!--
 Made with Book Theme
@@ -49,6 +49,18 @@ https://github.com/alex-shpak/hugo-book
 
 
 
+  
+<ul>
+  
+  <li>
+    <a href="/tags" target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
 
 
 
@@ -60,6 +72,19 @@ https://github.com/alex-shpak/hugo-book
 
   
   <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/osc/rxcpp/" class="">RxCpp</a>
+  
+
+        </li>
+      
     
       
         <li>
@@ -121,6 +146,19 @@ https://github.com/alex-shpak/hugo-book
 
   
     <a href="/docs/myth/thinking_in_multithread/" class="">多线程交互的思考</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/cpp/asio/" class="">ASIO阅读笔记</a>
   
 
         </li>
@@ -220,11 +258,16 @@ https://github.com/alex-shpak/hugo-book
       
         <li class="flex justify-between">
           <a href="/tags/cpp/">cpp</a>
-          <span>3</span>
+          <span>6</span>
         </li>
       
         <li class="flex justify-between">
           <a href="/tags/linux/">linux</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/asio/">asio</a>
           <span>1</span>
         </li>
       
@@ -258,6 +301,67 @@ https://github.com/alex-shpak/hugo-book
 
       
       
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/docs/osc/rxcpp/">RxCpp</a>
+    </h2>
+    
+  <h5>July 10, 2022</h5>
+
+
+
+  
+
+  
+  <div>
+    
+      <a href="/tags/cpp/">cpp</a>
+  </div>
+  
+
+
+
+
+    <p><p>Reactive Programming似乎是已经过时了。</p>
+<p>初次接触的时候是在快毕业的时候，大概2017年。那时RxJava/RxAndroid配合网络库来做一些很fancy的重试、消除重复点击之类的任务，可以把代码写的异常的优雅。当时实际的编码量和项目经验不足，理解起来稍微困难了点。现在工作中也有了可以抽象成<code>stream</code>的场景，看看能不能把这个库看明白点用在工作中。</p>
+<p>这里不会太关注rx的一些使用场景，更多关注一些稍微细节一些的实现，以帮助和梳理使用时对各个组件生命周期的把控。</p>
+        <a href="/docs/osc/rxcpp/">...</a>
+      
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/docs/cpp/traits/">【翻译】Traits:一种新的而且有用的Template技巧</a>
+    </h2>
+    
+  <h5>May 27, 2022</h5>
+
+
+
+  
+
+  
+  <div>
+    
+      <a href="/tags/cpp/">cpp</a>
+  </div>
+  
+
+
+
+
+    <p><blockquote>
+<p>文章来自<a href="http://www.cantrip.org/traits.html">Traits: a new and useful template technique</a></p>
+<p>应该是很老(1995)的文章了，不过很适合作为Template入门的材料。</p>
+</blockquote>
+<p>ANSI/ISO C++标准库一开始就想支持国际化(internationalization)，虽然一开始还没相好具体细节，但是最近5年逐渐有点眉目了。现在得到的结论是，应当用template来对需要进行字符操作的工具进行参数化。</p>
+<p>给现有的iostream和string类型进行参数化其实挺难的，需要发明一种新的技术才行。幸运的是，这种技术可以很好的服用在其他地方。</p>
+        <a href="/docs/cpp/traits/">...</a>
+      
+    </p>
+  </article>
   
   <article class="markdown book-post">
     <h2>
@@ -310,6 +414,34 @@ https://github.com/alex-shpak/hugo-book
 
     <p><p>最近开始写多线程的程序，整理一下对多线程代码的思考。</p>
         <a href="/docs/myth/thinking_in_multithread/">...</a>
+      
+    </p>
+  </article>
+  
+  <article class="markdown book-post">
+    <h2>
+      <a href="/docs/cpp/asio/">ASIO阅读笔记</a>
+    </h2>
+    
+  <h5>January 20, 2020</h5>
+
+
+
+  
+
+  
+  <div>
+    
+      <a href="/tags/cpp/">cpp</a>, 
+      <a href="/tags/asio/">asio</a>
+  </div>
+  
+
+
+
+
+    <p><p><code>ASIO</code>或许是最知名的C++网络库了吧。</p>
+        <a href="/docs/cpp/asio/">...</a>
       
     </p>
   </article>
@@ -405,11 +537,16 @@ document.querySelectorAll("pre code").forEach(code=>{code.addEventListener("clic
       
         <li class="flex justify-between">
           <a href="/tags/cpp/">cpp</a>
-          <span>3</span>
+          <span>6</span>
         </li>
       
         <li class="flex justify-between">
           <a href="/tags/linux/">linux</a>
+          <span>2</span>
+        </li>
+      
+        <li class="flex justify-between">
+          <a href="/tags/asio/">asio</a>
           <span>1</span>
         </li>
       

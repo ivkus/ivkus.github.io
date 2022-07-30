@@ -6,10 +6,21 @@
     <description>Recent content in linux on 存留处</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Thu, 24 Dec 2020 21:54:51 +0800</lastBuildDate>
+    <lastBuildDate>Tue, 31 May 2022 23:26:20 +0800</lastBuildDate>
     
 	<atom:link href="https://ivkus.github.io/tags/linux/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Logging On Linux</title>
+      <link>https://ivkus.github.io/docs/notes/log_on_linux/</link>
+      <pubDate>Tue, 31 May 2022 23:26:20 +0800</pubDate>
+      
+      <guid>https://ivkus.github.io/docs/notes/log_on_linux/</guid>
+      <description>&lt;blockquote&gt;
+&lt;p&gt;简单回顾一些Linux上日志系统的一些背景，并配置一个rsyslog的日志结构化落db的系统。&lt;/p&gt;
+&lt;/blockquote&gt;</description>
+    </item>
     
     <item>
       <title>Systemd阅读笔记</title>

@@ -6,10 +6,21 @@
     <description>Recent content on 存留处</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-cn</language>
-    <lastBuildDate>Sun, 22 Mar 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 10 Jul 2022 22:58:05 +0800</lastBuildDate>
     
 	<atom:link href="https://ivkus.github.io/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>RxCpp</title>
+      <link>https://ivkus.github.io/docs/osc/rxcpp/</link>
+      <pubDate>Sun, 10 Jul 2022 22:58:05 +0800</pubDate>
+      
+      <guid>https://ivkus.github.io/docs/osc/rxcpp/</guid>
+      <description>&lt;p&gt;Reactive Programming似乎是已经过时了。&lt;/p&gt;
+&lt;p&gt;初次接触的时候是在快毕业的时候，大概2017年。那时RxJava/RxAndroid配合网络库来做一些很fancy的重试、消除重复点击之类的任务，可以把代码写的异常的优雅。当时实际的编码量和项目经验不足，理解起来稍微困难了点。现在工作中也有了可以抽象成&lt;code&gt;stream&lt;/code&gt;的场景，看看能不能把这个库看明白点用在工作中。&lt;/p&gt;
+&lt;p&gt;这里不会太关注rx的一些使用场景，更多关注一些稍微细节一些的实现，以帮助和梳理使用时对各个组件生命周期的把控。&lt;/p&gt;</description>
+    </item>
     
     <item>
       <title>Logging On Linux</title>
@@ -56,23 +67,21 @@
     </item>
     
     <item>
-      <title>关于</title>
-      <link>https://ivkus.github.io/about/</link>
-      <pubDate>Sun, 22 Mar 2020 00:00:00 +0000</pubDate>
-      
-      <guid>https://ivkus.github.io/about/</guid>
-      <description>思绪随风飘扬。
- contract me aiueclipse@mail.com
- </description>
-    </item>
-    
-    <item>
       <title>多线程交互的思考</title>
       <link>https://ivkus.github.io/docs/myth/thinking_in_multithread/</link>
       <pubDate>Sat, 21 Mar 2020 21:41:48 +0800</pubDate>
       
       <guid>https://ivkus.github.io/docs/myth/thinking_in_multithread/</guid>
       <description>&lt;p&gt;最近开始写多线程的程序，整理一下对多线程代码的思考。&lt;/p&gt;</description>
+    </item>
+    
+    <item>
+      <title>ASIO阅读笔记</title>
+      <link>https://ivkus.github.io/docs/cpp/asio/</link>
+      <pubDate>Mon, 20 Jan 2020 22:58:05 +0800</pubDate>
+      
+      <guid>https://ivkus.github.io/docs/cpp/asio/</guid>
+      <description>&lt;p&gt;&lt;code&gt;ASIO&lt;/code&gt;或许是最知名的C++网络库了吧。&lt;/p&gt;</description>
     </item>
     
     <item>

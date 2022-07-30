@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-cn" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="ASIO或许是最知名的C&#43;&#43;网络库了吧。">
+<meta name="theme-color" content="#FFFFFF">
+<meta name="color-scheme" content="light dark"><meta property="og:title" content="ASIO阅读笔记" />
+<meta property="og:description" content="ASIO或许是最知名的C&#43;&#43;网络库了吧。" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://ivkus.github.io/docs/cpp/asio/" />
+<meta property="article:published_time" content="2020-01-20T22:58:05+08:00" />
+<meta property="article:modified_time" content="2020-01-20T22:58:05+08:00" />
+<title>ASIO阅读笔记 | 存留处</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/favicon.png" type="image/x-icon">
+<link rel="stylesheet" href="/book.min.da110f27d6a4d632dc8e162876b7216c5c1f82164fbdac7ff33021633767f034.css" integrity="sha256-2hEPJ9ak1jLcjhYodrchbFwfghZPvax/8zAhYzdn8DQ=" crossorigin="anonymous">
+  <script defer src="/flexsearch.min.js"></script>
+  <script defer src="/en.search.min.0d6d49fe1f560163bb045c872146a7e43d193c4be43ffc9a57ab4cae76c399f4.js" integrity="sha256-DW1J/h9WAWO7BFyHIUan5D0ZPEvkP/yaV6tMrnbDmfQ=" crossorigin="anonymous"></script>
+<!--
+Made with Book Theme
+https://github.com/alex-shpak/hugo-book
+-->
+  
+</head>
+<body dir="ltr">
+  <input type="checkbox" class="hidden toggle" id="menu-control" />
+  <input type="checkbox" class="hidden toggle" id="toc-control" />
+  <main class="container flex">
+    <aside class="book-menu">
+      <div class="book-menu-content">
+        
+  <nav>
+<h2 class="book-brand">
+  <a class="flex align-center" href="/"><span>存留处</span>
+  </a>
+</h2>
+
+
+<div class="book-search">
+  <input type="text" id="book-search-input" placeholder="Search" aria-label="Search" maxlength="64" data-hotkeys="s/" />
+  <div class="book-search-spinner hidden"></div>
+  <ul id="book-search-results"></ul>
+</div>
+
+
+
+
+
+
+
+  
+<ul>
+  
+  <li>
+    <a href="/tags" target="_blank" rel="noopener">
+        Tags
+      </a>
+  </li>
+  
+</ul>
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <ul>
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/osc/rxcpp/" class="">RxCpp</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/notes/log_on_linux/" class="">Logging On Linux</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/cpp/traits/" class="">【翻译】Traits:一种新的而且有用的Template技巧</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/cpp/cpp_emptyclass_opt/" class="">【翻译】c&#43;&#43;类中“空成员”的优化</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/osc/systemd_read/" class="">Systemd阅读笔记</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/myth/thinking_in_multithread/" class="">多线程交互的思考</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/cpp/asio/" class="active">ASIO阅读笔记</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/osc/waf/" class="">Waf - a Python based build system</a>
+  
+
+        </li>
+      
+    
+      
+        <li>
+          
+  
+  
+
+  
+    <a href="/docs/osc/ns3_typeid/" class="">TypeId in NS3</a>
+  
+
+        </li>
+      
+    
+  </ul>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</nav>
+
+
+
+
+  <script>(function(){var menu=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(event){localStorage.setItem("menu.scrollTop",menu.scrollTop);});menu.scrollTop=localStorage.getItem("menu.scrollTop");})();</script>
+
+
+ 
+      </div>
+    </aside>
+
+    <div class="book-page">
+      <header class="book-header">
+        
+  <div class="flex align-center justify-between">
+  <label for="menu-control">
+    <img src="/svg/menu.svg" class="book-icon" alt="Menu" />
+  </label>
+
+  <strong>ASIO阅读笔记</strong>
+
+  <label for="toc-control">
+    
+    <img src="/svg/toc.svg" class="book-icon" alt="Table of Contents" />
+    
+  </label>
+</div>
+
+
+  
+  <aside class="hidden clearfix">
+    
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#参考">参考</a></li>
+    <li><a href="#由socks5引入asio">由socks5引入asio</a></li>
+    <li><a href="#asio基本构件">asio基本构件</a>
+      <ul>
+        <li><a href="#用户视角">用户视角</a></li>
+        <li><a href="#库视角">库视角</a></li>
+      </ul>
+    </li>
+    <li><a href="#执行流程">执行流程</a>
+      <ul>
+        <li><a href="#从epoll切入">从epoll切入</a></li>
+        <li><a href="#回调">回调</a></li>
+        <li><a href="#填充回调">填充回调</a></li>
+        <li><a href="#scheduler">Scheduler</a></li>
+      </ul>
+    </li>
+    <li><a href="#技法学习">技法学习</a>
+      <ul>
+        <li><a href="#object_poll--object_poll_access">object_poll &amp; object_poll_access</a></li>
+        <li><a href="#header-only-programming">header only programming</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+
+  </aside>
+  
+ 
+      </header>
+
+      
+      
+  <article class="markdown"><p><code>ASIO</code>或许是最知名的C++网络库了吧。</p>
+<h1 id="参考">参考</h1>
+<p>Asio Implementation <a href="http://spiritsaway.info/asio-implementation.html">http://spiritsaway.info/asio-implementation.html</a></p>
+<blockquote>
+<p>这篇文章是我找到说的最详细的一篇，但看起来还是有点吃力。希望我现在写的这篇能够再稍微降低一点理解asio的门槛。
+这篇文章里有的内容这边就不再重复了。我看的版本是asio-1.22，对应boost里1.77或者1.78。有些术语说法是不太一样的，但无大碍。</p>
+</blockquote>
+<h1 id="由socks5引入asio">由socks5引入asio</h1>
+<p>asio是c++里写网络程序绕不开的一个库，很多人都知道，但真正用的人好像不是很多；因为据说有点晦涩，不太好用。</p>
+<p>socks5是用的很多的一个代理协议，比较简单，适合拿来练手。</p>
+<p><a href="https://github.com/philave/boost_socks5/blob/master/boost_socks5.cpp">https://github.com/philave/boost_socks5/blob/master/boost_socks5.cpp</a></p>
+<p>上面这个用asio来写了个简单的socks5 server，400+行。</p>
+<h1 id="asio基本构件">asio基本构件</h1>
+<p>asio内部也有与客户端-服务器类似的结构。其中，io_context扮演了物理机的角色，上面容纳了很多不同的进程来提供服务，这些进程统称service。这也就意味着，如果程序里有多个io_context，相同类型的service在每个io_context都会有一个instance。每个service都会注册到io_context所拥有的service_registery上，对于每个io_context来说，service是单例的。asio提供了通用的方法来从一个io_context里获取到自己想要的service: <code>template &lt;typename Service&gt; Service&amp; use_service(io_context&amp; owner)</code>。</p>
+<p>这里需要提及一点，本来应该从函数入参给的参数（这里是sercvice），这里做成了template parameter；可能是出于效率的考量，但也着实增加了上手理解难度。</p>
+<p>要说什么才是service？这个就很随意了，因为service只是为了io_context进行管理的一个接口。在asio的代码里，能看到很多不同层级的组件都注册成为了service，只是为了能够随时用use_service拿到一个singleton。</p>
+<h2 id="用户视角">用户视角</h2>
+<p>用户这边只需要一个iocontext就够了。如果要建立连接，tcpsocket；接受连接，acceptor；最多再加几个helper比如tcpendpoint，steadytimer等。各种需求都在这些class里找对应方法就行。</p>
+<h2 id="库视角">库视角</h2>
+<p>在Linux上网络编程用到的API就几个，socket、bind、listen、accept、connect；监控fd的select/poll/epoll；外加read/write这一系列的读通用写函数。asio的目的就是把这些操作隐藏起来，封装成更符合asio的语义。</p>
+<h1 id="执行流程">执行流程</h1>
+<blockquote>
+<p>需要搞清楚怎么处理回调，其他都是属于c++技法的部分。</p>
+</blockquote>
+<p>谈起网络库，epoll与各类事件的监听与发送应该是核心，在asio里涉及这块的代码是<code>scheduler.do_run_one/task_cleanup::~task_cleanup</code>，数据结构是<code>scheduler.op_queue_/scheduler.task_operation_</code>。</p>
+<ol>
+<li>scheduler.do_run_one里有个对task_-&gt;run的调用，这个是epoll，也是唯一会block的地方。这个调用会填充this_thread.private_op_queue，这是个queue，里面装的operation。</li>
+<li>task_cleanup::~task_cleanup在出了这个scope后被调用，这个函数把那个this_thread.private_op_queue接到scheduler.op_queue后，再接一个scheduler.task_operation_（这本质上是个标志，标记着一次epoll后所有op的结尾）。</li>
+<li>scheduler.op_queue里有东西，那么do_run_one就会一直不停的运行下去，走到<code>o == &amp;task_operation_</code>的else分支里，那里完成了对op的回调。</li>
+</ol>
+<p>值得注意的是，在回调中，也是有可能继续插入新的op到这个op_queue中。一旦这个op_queue不为空，就不能block。但如果原来epoll_wait的时候拿到的op执行完了怎么办？好说，epoll_wait的timeout指定为0就可以了。</p>
+<h2 id="从epoll切入">从epoll切入</h2>
+<p>epoll本身不解释，看下在epoll_wait返回后能拿到什么：</p>
+<ul>
+<li>一个fd</li>
+<li>这个fd上发生了什么事件（可读、可写、错误）</li>
+<li>一个用户自定义的u64的数值
+这个就是os提供的最底层的表现，无关乎c++。怎么用这3个信息，可以引入c++来辅助解决。</li>
+</ul>
+<p>u64数值是一个指向自定义结构(descriptor_state)的指针，这个结构存储了所有需要的信息。</p>
+<ul>
+<li><code>int task_result_</code> 存放fd的事件结果。</li>
+<li><code>int descriptor_</code> 存放关联的fd。</li>
+<li><code>op_queue&lt;reactor_op&gt;</code> 存放回调。意思是对应事件发生的时候，从这个queue里取一个出来执行一下。
+<ul>
+<li>对于一个fd上的事件，asio认为它只能有4种情况发生：1. 可读；2. 可写；3. 连接成功了；4. 发生了什么意外。这4种事件，每个都享有自己单独的 <code>op_queue&lt;reactor_op&gt;</code></li>
+<li>这个是一个queue，reactor_op是回调本身</li>
+</ul>
+</li>
+</ul>
+<h2 id="回调">回调</h2>
+<p>c++里的回调可以用虚函数来实现，保存一个base的指针，然后call virtual函数就行。</p>
+<p>asio没选这个，而是用了一个结构存放一个函数指针。这个结构是scheduler_operatoion（真名），然后外面用的名字就叫operation，是用一个typedef完成了名字的转变。operation在windows上也有自己的名字:win_io_operation。这里就能看出来为啥没有用虚函数来实现了，因为win_io_operation的签名是这样的：  <code>class win_io_operation: public OVERLAPPED</code> 。用虚函数的话，会影响这个OVERLAPPED的内存结构，把operation的指针传到内核的时候就有会有问题（前面多了个虚指针）。</p>
+<p>精简一下的operation是这样</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#66d9ef">class</span> <span style="color:#a6e22e">operation</span> {
+  <span style="color:#66d9ef">void</span> <span style="color:#a6e22e">complete</span>(<span style="color:#66d9ef">void</span><span style="color:#f92672">*</span> owner, <span style="color:#66d9ef">const</span> asio<span style="color:#f92672">::</span>error_code<span style="color:#f92672">&amp;</span> ec, std<span style="color:#f92672">::</span>size_t bytes_transferred)
+  { func_(owner, <span style="color:#66d9ef">this</span>, ec, bytes_transferred); }
+
+  <span style="color:#66d9ef">typedef</span> <span style="color:#a6e22e">void</span> (<span style="color:#f92672">*</span>func_type)(<span style="color:#66d9ef">void</span><span style="color:#f92672">*</span>, scheduler_operation<span style="color:#f92672">*</span>, <span style="color:#66d9ef">const</span> asio<span style="color:#f92672">::</span>error_code<span style="color:#f92672">&amp;</span>, std<span style="color:#f92672">::</span>size_t);
+  func_type func_;
+  <span style="color:#66d9ef">unsigned</span> <span style="color:#66d9ef">int</span> task_result_; <span style="color:#75715e">// Passed into bytes transferred.
+</span><span style="color:#75715e"></span>};
+</code></pre></div><p>这个回调被调用的时候长这样：</p>
+<div class="highlight"><pre style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4"><code class="language-c++" data-lang="c++"><span style="color:#75715e">// o指向operation的一个指针
+</span><span style="color:#75715e">// this是scheduler
+</span><span style="color:#75715e"></span>o<span style="color:#f92672">-&gt;</span>complete(<span style="color:#66d9ef">this</span>, ec, task_result);
+</code></pre></div><p><code>complete</code> 方法调用了存在operation里的函数指针。
+到现在为止就比较清楚了，这个func_明显就是用户自己的逻辑应当存在的地方。关注点应当转移到怎么填充自己的逻辑到这个 <code>descriptor_state</code> 中去。</p>
+<h2 id="填充回调">填充回调</h2>
+<p>还是先回顾一下asio要io的时候是怎么操作的。</p>
+<ul>
+<li>async_read(buffer, handler)</li>
+<li>async_write(buffer, handler)</li>
+</ul>
+<p>通常来说，读可能会堵塞住是符合直觉的，因为数据并不在本机；写会堵塞就有点反常，毕竟可以先丢到buffer里让内核去处理。但这就是网络编程的比较繁杂的地方了，因为如果是tcp的写，是存在发送buffer满了写不进去的情况。</p>
+<p>所以读写操作是统一的，首先需要检查是不是可读可写，然后进行真正的读写操作。这是2个步骤。第一个步骤是依托于epoll进行检查，第二个步骤才是对fd进行read/write的系统调用。这2个步骤的执行时机都是交给框架进行，用户需要提供执行是需要的原料：一是读写的数据，一个是读写完成后执行的操作。这分别对应了async_xx的2个参数。</p>
+<p>作为用户，发起async_read之后，是希望框架能把这个socket的fd提交给epoll去监听。完成这个功能的组件叫 <code>epoll_reactor</code> 。<code>epoll_reactor</code>是个被动组件，意思是只提供功能，但是需要别的组件去主动调用。这个场景下（socket fd的读写），主动组件是reactive_socket_service。这个执行的动作是一个函数，叫 <code>start_op</code> 。</p>
+<blockquote>
+<p>复习：reactive_socket_service是通过user_service拿到epoll_reactor的引用的。
+提交给 <code>start_op</code> 的参数很多，但必定有一个指向op的指针，以及需要操作的socket。</p>
+</blockquote>
+<p><code>start_op</code> 有2个任务，其一是将op挂到<code>scheduler::op_queue&lt;operation&gt; op_queue_</code>中去；其二是唤醒某个线程来执行操作。</p>
+<h2 id="scheduler">Scheduler</h2>
+<p>程序运行的时候会有个循环，里面调用epoller来处理fd相关的事情，然后回调functor。ASIO里这些事情都隐藏在io_context后面，这个循环在ASIO里叫scheduler。代码中用了一个pimpl，把对io_context的操作转发到了scheduler中。</p>
+<p>这里有几个关键的数据结构</p>
+<dl>
+<dt>scheduler</dt>
+<dd><ul>
+<li>io_context背后实际干活儿的人</li>
+</ul>
+</dd>
+<dt>scheduler::reactor* task_</dt>
+<dd><ul>
+<li>依据平台配置是个typedef， 可以是epoll_reactor/kquee_reactor/select_reactor</li>
+<li>负责各种fd的事件注册与结果获取（read/write/error)</li>
+<li>会被reactive_socket_service_base所引用，socket/acceptor的io_object的操作(read/write/async_xx)经过reactive_socket_service转发，最终会跑到这里来，把想要读还是写告诉reactor，并把回调通过某种方式包装起来送给poll/epoll的用户指针里。</li>
+</ul>
+</dd>
+<dt>scheduler::op_queue<operation> op_queue_;</dt>
+<dd><ul>
+<li>回调存储的地方</li>
+<li>可以是上层post进来的交给scheduler运行的token</li>
+<li>可以是reactor(task_)获取到的可读写消息</li>
+</ul>
+</dd>
+</dl>
+<p>所以<code>ioc.run()</code>的干了什么就清楚了：</p>
+<ol>
+<li>op_queue_有数据，就拿出来运行。<code>op-&gt;complete(this, ec, task_result)</code>，直到op_queue_为空</li>
+<li>task_-&gt;run()来等fd的消息</li>
+<li>重复上面两步。</li>
+</ol>
+<h1 id="技法学习">技法学习</h1>
+<h2 id="object_poll--object_poll_access">object_poll &amp; object_poll_access</h2>
+<p>提供一个侵入式的对象池。对象自己提供prev/next就行。</p>
+<p>object_poll_access提供了create/destroy/prev/next的方法，这些可以是一些扩展点。</p>
+<h2 id="header-only-programming">header only programming</h2>
+<p>文件分为.hpp .ipp。具体细节封装到impl下。</p></article>
+ 
+      
+
+      <footer class="book-footer">
+        
+  <div class="flex flex-wrap justify-between">
+
+
+
+
+
+</div>
+
+
+
+  <script>(function(){function select(element){const selection=window.getSelection();const range=document.createRange();range.selectNodeContents(element);selection.removeAllRanges();selection.addRange(range);}
+document.querySelectorAll("pre code").forEach(code=>{code.addEventListener("click",function(event){select(code.parentElement);if(navigator.clipboard){navigator.clipboard.writeText(code.parentElement.textContent);}});});})();</script>
+
+
+ 
+        
+      </footer>
+
+      
+  
+  <div class="book-comments">
+
+</div>
+  
+ 
+
+      <label for="menu-control" class="hidden book-menu-overlay"></label>
+    </div>
+
+    
+    <aside class="book-toc">
+      <div class="book-toc-content">
+        
+  
+<nav id="TableOfContents">
+  <ul>
+    <li><a href="#参考">参考</a></li>
+    <li><a href="#由socks5引入asio">由socks5引入asio</a></li>
+    <li><a href="#asio基本构件">asio基本构件</a>
+      <ul>
+        <li><a href="#用户视角">用户视角</a></li>
+        <li><a href="#库视角">库视角</a></li>
+      </ul>
+    </li>
+    <li><a href="#执行流程">执行流程</a>
+      <ul>
+        <li><a href="#从epoll切入">从epoll切入</a></li>
+        <li><a href="#回调">回调</a></li>
+        <li><a href="#填充回调">填充回调</a></li>
+        <li><a href="#scheduler">Scheduler</a></li>
+      </ul>
+    </li>
+    <li><a href="#技法学习">技法学习</a>
+      <ul>
+        <li><a href="#object_poll--object_poll_access">object_poll &amp; object_poll_access</a></li>
+        <li><a href="#header-only-programming">header only programming</a></li>
+      </ul>
+    </li>
+  </ul>
+</nav>
+
+
+ 
+      </div>
+    </aside>
+    
+  </main>
+
+  
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
